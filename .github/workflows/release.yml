@@ -48,7 +48,7 @@ jobs:
         if: steps.check_release.outputs.exists == 'false'
         run: |
           mvn install:install-file \
-            -Dfile=libs/NeptuneAPI-2.5.jar \
+            -Dfile=API/NeptuneAPI-2.5.jar \
             -DgroupId=me.dev.lrxh \
             -DartifactId=API \
             -Dversion=2.5 \
