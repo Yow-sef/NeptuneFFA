@@ -1,0 +1,17 @@
+name: NeptuneFFA
+main: dev.yowsef.neptuneffa.NeptuneFFA
+author: yowsef
+version: 1.0.0
+api-version: '1.21'
+depend: [Neptune]
+commands:
+  ffa:
+    usage: /ffa [leave|join <kit>|list|stats]
+  ffaadmin:
+    usage: /ffaadmin [reload|open|close|reset|kick|setarena|addspawn|clearspawns]
+    permission: neptuneffa.admin
+
+permissions:
+  neptuneffa.admin:
+    description: Grants admin access to NeptuneFFA
+    default: op

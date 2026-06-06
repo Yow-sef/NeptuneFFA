@@ -1,0 +1,9 @@
+kits:
+  # Examples
+  # Nodebuff:
+  #   enabled: true
+  #   arena: CastleTop
+  #   worldgen: false
+  #   reset-interval-minutes: 10
+  #   respawn-delay-override: -1
+  #   spawn-points: []

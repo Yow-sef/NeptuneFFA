@@ -1,0 +1,44 @@
+ffa:
+  lobby-item:
+    enabled: true
+    slot: 8
+    material: DIAMOND_SWORD
+    name: "&c&lFree For All &7(Right Click)"
+    lore:
+      - "&7Jump into an FFA arena"
+
+  respawn-delay-seconds: 5
+  reset-warning-seconds: [60, 30, 10, 5]
+  track-neptune-kit-stats: true
+
+  combat-tag:
+    duration-seconds: 15
+    actionbar-message: "&c&lCombat Tag: &e{seconds}s"
+
+  menu:
+    title: "&c&lFree For All"
+    size: 27
+    filler:
+      enabled: true
+      material: BLACK_STAINED_GLASS_PANE
+      name: " "
+
+  scoreboard:
+    update-interval-ticks: 20
+    title: "&c&lFFA"
+    lines:
+      - "&7&m--------------------"
+      - "&fKit: &c<ffa_kit> &7| &fPlayers: &a<ffa_players>"
+      - "&fReset: &e<ffa_reset_timer>"
+      - " "
+      - "&a&lSession"
+      - " &fKills: &a<ffa_session_kills> &7| &fDeaths: &c<ffa_session_deaths>"
+      - " &fStreak: &e<ffa_session_streak> &7(Best: <ffa_session_best_streak>)"
+      - " "
+      - "&d&lLifetime"
+      - " &fKills: &a<ffa_lifetime_kills> &7| &fKDR: &b<ffa_kdr>"
+      - " &fRank: &e#<ffa_rank>"
+      - " &fTop: &c<ffa_top_killer> &7(<ffa_top_killer_kills>)"
+      - " "
+      - "&bserver.net"
+      - "&7&m--------------------"
