@@ -48,8 +48,9 @@ public class FfaArenaRestorer {
                     com.sk89q.worldedit.function.operation.Operations.complete(copy);
                 }
 
-                try (com.sk89q.worldedit.extent.clipboard.io.ClipboardWriter writer = 
-                        com.sk89q.worldedit.extent.clipboard.io.BuiltInClipboardFormat.SPONGE_SCHEMATIC.getWriter(new FileOutputStream(file))) {
+                try (FileOutputStream fos = new FileOutputStream(file);
+                     com.sk89q.worldedit.extent.clipboard.io.ClipboardWriter writer =
+                             com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats.findByFile(file).getWriter(fos)) {
                     writer.write(clipboard);
                 }
                 NeptuneFFA.getInstance().getLogger().info("Successfully captured and saved clean schematic for arena: " + arenaName);
@@ -73,8 +74,9 @@ public class FfaArenaRestorer {
 
         try {
             com.sk89q.worldedit.extent.clipboard.Clipboard clipboard;
-            try (com.sk89q.worldedit.extent.clipboard.io.ClipboardReader reader = 
-                    com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats.findByFile(file).getReader(new FileInputStream(file))) {
+            try (FileInputStream fis = new FileInputStream(file);
+                 com.sk89q.worldedit.extent.clipboard.io.ClipboardReader reader =
+                         com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats.findByFile(file).getReader(fis)) {
                 clipboard = reader.read();
             }
 
