@@ -90,12 +90,15 @@ public class FfaArenaRestorer {
                         .checkMemory(false)
                         .limitUnlimited()
                         .build()) {
-                    com.sk89q.worldedit.function.operation.Operations.complete(new com.sk89q.worldedit.session.ClipboardHolder(clipboard)
+                        try (com.sk89q.worldedit.session.ClipboardHolder holder = new com.sk89q.worldedit.session.ClipboardHolder(clipboard)) {
+                        com.sk89q.worldedit.function.operation.Operation op = holder
                             .createPaste(target)
                             .to(clipboard.getOrigin())
                             .ignoreAirBlocks(false)
                             .copyEntities(false)
-                            .build());
+                            .build();
+                        com.sk89q.worldedit.function.operation.Operations.complete(op);
+                        }
                 }
             }
             NeptuneFFA.getInstance().getLogger().info("Successfully restored clean schematic for arena: " + arenaName);
