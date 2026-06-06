@@ -1,4 +1,5 @@
-# NeptuneFFA
+# NeptuneFFA 
+
 
 A high-performance, fully featured Free-For-All (FFA) addon built for the **Neptune Core** tournament/practice framework. 
 
@@ -247,3 +248,5 @@ cd NeptuneFFA
 mvn clean package
 ```
 This will compile the addon and output a shadowed jar under `target/NeptuneFFA-1.0.0.jar`.
+
+# [Support Server](https://discord.gg/QFpe4j8bNq)
