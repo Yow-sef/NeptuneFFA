@@ -27,19 +27,19 @@ public class MessagesConfig {
         }
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
 
-        FFA_JOIN = config.getString("ffa-join", "&a{player} &7joined FFA &e({kit})&7.");
-        FFA_LEAVE = config.getString("ffa-leave", "&c{player} &7left FFA &e({kit})&7.");
-        FFA_KILL = config.getString("ffa-kill", "&c{killer} &7killed &c{victim} &8[&e{victim_session_kills} kills&8]");
-        FFA_RESET_WARN = config.getString("ffa-reset-warn", "&6[FFA] &eArena resets in &c{seconds}s&e!");
-        FFA_RESET_KICK = config.getString("ffa-reset-kick", "&6[FFA] &eArena is resetting. Returning you to lobby.");
-        FFA_RESET_OPEN = config.getString("ffa-reset-open", "&6[FFA] &eArena &a{arena} &ehas reopened!");
-        FFA_RESPAWN = config.getString("ffa-respawn", "&7Respawning in &e{seconds}&7...");
-        FFA_NO_SESSION = config.getString("ffa-no-session", "&cNo FFA session is open for that kit.");
-        FFA_NOT_IN_FFA = config.getString("ffa-not-in-ffa", "&cYou are not in an FFA session.");
-        FFA_ALREADY_IN = config.getString("ffa-already-in", "&cYou are already in an FFA session.");
+        FFA_JOIN = color(config.getString("ffa-join", "&a{player} &7joined FFA &e({kit})&7."));
+        FFA_LEAVE = color(config.getString("ffa-leave", "&c{player} &7left FFA &e({kit})&7."));
+        FFA_KILL = color(config.getString("ffa-kill", "&c{killer} &7killed &c{victim} &8[&e{victim_session_kills} kills&8]"));
+        FFA_RESET_WARN = color(config.getString("ffa-reset-warn", "&6[FFA] &eArena resets in &c{seconds}s&e!"));
+        FFA_RESET_KICK = color(config.getString("ffa-reset-kick", "&6[FFA] &eArena is resetting. Returning you to lobby."));
+        FFA_RESET_OPEN = color(config.getString("ffa-reset-open", "&6[FFA] &eArena &a{arena} &ehas reopened!"));
+        FFA_RESPAWN = color(config.getString("ffa-respawn", "&7Respawning in &e{seconds}&7..."));
+        FFA_NO_SESSION = color(config.getString("ffa-no-session", "&cNo FFA session is open for that kit."));
+        FFA_NOT_IN_FFA = color(config.getString("ffa-not-in-ffa", "&cYou are not in an FFA session."));
+        FFA_ALREADY_IN = color(config.getString("ffa-already-in", "&cYou are already in an FFA session."));
     }
 
     private static String color(String s) {
-        return ChatColor.translateAlternateColorCodes('&', s);
+        return s == null ? "" : ChatColor.translateAlternateColorCodes('&', s);
     }
 }
