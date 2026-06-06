@@ -17,7 +17,6 @@ import org.bukkit.inventory.ItemStack;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class ArenaPickerMenu extends PaginatedMenu {
     private final IKit kit;

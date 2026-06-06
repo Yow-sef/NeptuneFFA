@@ -1,10 +1,8 @@
 package dev.yowsef.neptuneffa.menu.player;
 
 import dev.lrxh.api.kit.IKit;
-import dev.yowsef.neptuneffa.session.FfaParticipant;
 import dev.yowsef.neptuneffa.session.FfaSession;
 import dev.yowsef.neptuneffa.session.FfaSessionService;
-import dev.yowsef.neptuneffa.scoreboard.FfaPlaceholders;
 import dev.yowsef.neptuneffa.util.FormatUtil;
 import dev.yowsef.neptuneffa.API;
 import dev.yowsef.neptuneffa.util.ItemBuilder;

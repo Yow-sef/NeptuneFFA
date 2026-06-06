@@ -6,7 +6,6 @@ import dev.yowsef.neptuneffa.config.FfaConfig;
 import dev.yowsef.neptuneffa.config.KitFfaSettings;
 import dev.yowsef.neptuneffa.session.FfaSession;
 import dev.yowsef.neptuneffa.session.FfaSessionService;
-import dev.yowsef.neptuneffa.util.FormatUtil;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;

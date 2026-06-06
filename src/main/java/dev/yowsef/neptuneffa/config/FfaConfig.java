@@ -1,7 +1,6 @@
 package dev.yowsef.neptuneffa.config;
 
 import dev.lrxh.api.kit.IKit;
-import dev.yowsef.neptuneffa.API;
 import dev.yowsef.neptuneffa.NeptuneFFA;
 import lombok.Getter;
 import org.bukkit.Material;
