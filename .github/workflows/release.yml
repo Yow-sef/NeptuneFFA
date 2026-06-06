@@ -44,6 +44,16 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Install local API dependency
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          mvn install:install-file \
+            -Dfile=libs/NeptuneAPI-2.5.jar \
+            -DgroupId=me.dev.lrxh \
+            -DartifactId=API \
+            -Dversion=2.5 \
+            -Dpackaging=jar
+
       - name: Build with Maven
         if: steps.check_release.outputs.exists == 'false'
         run: mvn clean package
