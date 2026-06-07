@@ -44,29 +44,21 @@ public class FfaResetTask extends BukkitRunnable {
         session.close(MessagesConfig.FFA_RESET_KICK);
         dev.lrxh.api.arena.IArena arena = session.getSettings().resolveArena();
         if (arena != null && arena.isSetup() && arena.isEnabled()) {
+            dev.yowsef.neptuneffa.util.FfaArenaRestorer.clearEntities(arena);
             java.io.File schemFile = dev.yowsef.neptuneffa.util.FfaArenaRestorer.getSchematicFile(arena.getName());
             if (schemFile.exists()) {
                 org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(NeptuneFFA.getInstance(), () -> {
                     boolean restored = dev.yowsef.neptuneffa.util.FfaArenaRestorer.restoreFromSchematic(arena);
-                    org.bukkit.Bukkit.getScheduler().runTask(NeptuneFFA.getInstance(), () -> {
-                        if (restored) {
-                            arena.setMin(arena.getMin());
-                        }
-                        session.open();
-                    });
+                    org.bukkit.Bukkit.getScheduler().runTask(NeptuneFFA.getInstance(), session::open);
                 });
                 return;
             }
         }
 
         if (session.getSettings().isWorldgen() && arena != null) {
+            dev.yowsef.neptuneffa.util.FfaArenaRestorer.clearEntities(arena);
             arena.restore();
-            Bukkit.getScheduler().runTaskLater(NeptuneFFA.getInstance(), () -> {
-                arena.setMin(arena.getMin());
-                session.open();
-            }, 60L);
-        } else {
-            Bukkit.getScheduler().runTaskLater(NeptuneFFA.getInstance(), session::open, 60L);
         }
+        Bukkit.getScheduler().runTaskLater(NeptuneFFA.getInstance(), session::open, 60L);
     }
 }

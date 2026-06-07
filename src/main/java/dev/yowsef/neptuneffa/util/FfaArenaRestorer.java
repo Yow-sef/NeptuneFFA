@@ -42,15 +42,24 @@ public class FfaArenaRestorer {
                 com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard clipboard = new com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard(region);
                 clipboard.setOrigin(region.getMinimumPoint());
 
-                try (com.sk89q.worldedit.EditSession source = com.sk89q.worldedit.WorldEdit.getInstance().newEditSession(com.sk89q.worldedit.bukkit.BukkitAdapter.adapt(world))) {
-                    com.sk89q.worldedit.function.operation.ForwardExtentCopy copy = new com.sk89q.worldedit.function.operation.ForwardExtentCopy(source, region, clipboard, region.getMinimumPoint());
-                    copy.setCopyingEntities(false);
-                    com.sk89q.worldedit.function.operation.Operations.complete(copy);
+                synchronized (FfaArenaRestorer.class) {
+                    try (com.sk89q.worldedit.EditSession source = com.sk89q.worldedit.WorldEdit.getInstance().newEditSession(com.sk89q.worldedit.bukkit.BukkitAdapter.adapt(world))) {
+                        com.sk89q.worldedit.function.operation.ForwardExtentCopy copy = new com.sk89q.worldedit.function.operation.ForwardExtentCopy(source, region, clipboard, region.getMinimumPoint());
+                        copy.setCopyingEntities(false);
+                        com.sk89q.worldedit.function.operation.Operations.complete(copy);
+                    }
                 }
 
+                com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat format = null;
+                if (file.exists()) {
+                    format = com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats.findByFile(file);
+                }
+                if (format == null) {
+                    // Fall back to Sponge schematic format explicitly
+                    format = com.sk89q.worldedit.extent.clipboard.io.BuiltInClipboardFormat.SPONGE_SCHEMATIC;
+                }
                 try (FileOutputStream fos = new FileOutputStream(file);
-                     com.sk89q.worldedit.extent.clipboard.io.ClipboardWriter writer =
-                             com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats.findByFile(file).getWriter(fos)) {
+                     com.sk89q.worldedit.extent.clipboard.io.ClipboardWriter writer = format.getWriter(fos)) {
                     writer.write(clipboard);
                 }
                 NeptuneFFA.getInstance().getLogger().info("Successfully captured and saved clean schematic for arena: " + arenaName);
@@ -74,9 +83,15 @@ public class FfaArenaRestorer {
 
         try {
             com.sk89q.worldedit.extent.clipboard.Clipboard clipboard;
+            com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat format =
+                    com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats.findByFile(file);
+            if (format == null) {
+                NeptuneFFA.getInstance().getLogger().severe(
+                    "Cannot determine schematic format for file: " + file.getName() + " — skipping restore for arena: " + arenaName);
+                return false;
+            }
             try (FileInputStream fis = new FileInputStream(file);
-                 com.sk89q.worldedit.extent.clipboard.io.ClipboardReader reader =
-                         com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats.findByFile(file).getReader(fis)) {
+                 com.sk89q.worldedit.extent.clipboard.io.ClipboardReader reader = format.getReader(fis)) {
                 clipboard = reader.read();
             }
 
@@ -90,14 +105,18 @@ public class FfaArenaRestorer {
                         .checkMemory(false)
                         .limitUnlimited()
                         .build()) {
+                        // Use arena.getMin() directly — never trust clipboard.getOrigin() after disk round-trip
+                        com.sk89q.worldedit.math.BlockVector3 pasteTarget = com.sk89q.worldedit.math.BlockVector3.at(
+                            min.getBlockX(), min.getBlockY(), min.getBlockZ()
+                        );
                         try (com.sk89q.worldedit.session.ClipboardHolder holder = new com.sk89q.worldedit.session.ClipboardHolder(clipboard)) {
-                        com.sk89q.worldedit.function.operation.Operation op = holder
-                            .createPaste(target)
-                            .to(clipboard.getOrigin())
-                            .ignoreAirBlocks(false)
-                            .copyEntities(false)
-                            .build();
-                        com.sk89q.worldedit.function.operation.Operations.complete(op);
+                            com.sk89q.worldedit.function.operation.Operation op = holder
+                                .createPaste(target)
+                                .to(pasteTarget)
+                                .ignoreAirBlocks(false)
+                                .copyEntities(false)
+                                .build();
+                            com.sk89q.worldedit.function.operation.Operations.complete(op);
                         }
                 }
             }
@@ -107,6 +126,41 @@ public class FfaArenaRestorer {
             NeptuneFFA.getInstance().getLogger().severe("Failed to restore schematic for arena: " + arenaName);
             e.printStackTrace();
             return false;
+        }
+    }
+
+    public static void clearEntities(IArena arena) {
+        if (arena == null) return;
+        Location min = arena.getMin();
+        Location max = arena.getMax();
+        if (min == null || max == null || min.getWorld() == null) return;
+
+        World world = min.getWorld();
+        double minX = Math.min(min.getX(), max.getX());
+        double maxX = Math.max(min.getX(), max.getX()) + 1.0;
+        double minY = Math.min(min.getY(), max.getY());
+        double maxY = Math.max(min.getY(), max.getY()) + 1.0;
+        double minZ = Math.min(min.getZ(), max.getZ());
+        double maxZ = Math.max(min.getZ(), max.getZ()) + 1.0;
+
+        double cx = (minX + maxX) / 2.0;
+        double cy = (minY + maxY) / 2.0;
+        double cz = (minZ + maxZ) / 2.0;
+        double rx = (maxX - minX) / 2.0;
+        double ry = (maxY - minY) / 2.0;
+        double rz = (maxZ - minZ) / 2.0;
+
+        for (org.bukkit.entity.Entity entity : world.getNearbyEntities(new Location(world, cx, cy, cz), rx, ry, rz)) {
+            if (entity instanceof org.bukkit.entity.Player) continue;
+
+            if (entity instanceof org.bukkit.entity.EnderCrystal
+                    || entity instanceof org.bukkit.entity.Item
+                    || entity instanceof org.bukkit.entity.Projectile
+                    || entity instanceof org.bukkit.entity.TNTPrimed
+                    || entity instanceof org.bukkit.entity.FallingBlock
+                    || entity instanceof org.bukkit.entity.AreaEffectCloud) {
+                entity.remove();
+            }
         }
     }
 }

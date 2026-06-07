@@ -59,16 +59,16 @@ public class FfaSessionService {
                 if (schemFile.exists()) {
                     org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(NeptuneFFA.getInstance(), () -> {
                         boolean restored = dev.yowsef.neptuneffa.util.FfaArenaRestorer.restoreFromSchematic(arena);
-                        org.bukkit.Bukkit.getScheduler().runTask(NeptuneFFA.getInstance(), () -> {
-                            if (restored) {
-                                arena.setMin(arena.getMin());
-                            }
-                            session.open();
-                        });
+                        org.bukkit.Bukkit.getScheduler().runTask(NeptuneFFA.getInstance(), session::open);
                     });
                 } else {
-                    dev.yowsef.neptuneffa.util.FfaArenaRestorer.captureAndSave(arena);
+                    // Open session immediately since there is no schematic to restore yet.
+                    // Capture the clean state async for use on future resets.
+                    // Pass a callback so open() is confirmed after capture completes.
                     session.open();
+                    // Capture after opening so players can join while the snapshot is taken.
+                    // The first reset will use this snapshot.
+                    dev.yowsef.neptuneffa.util.FfaArenaRestorer.captureAndSave(arena);
                 }
                 return;
             }
