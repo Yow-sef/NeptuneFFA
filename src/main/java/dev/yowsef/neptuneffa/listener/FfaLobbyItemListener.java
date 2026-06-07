@@ -26,18 +26,17 @@ public class FfaLobbyItemListener implements Listener {
     public FfaLobbyItemListener() {
         // Periodic check to ensure lobby item is present
         Bukkit.getScheduler().runTaskTimer(NeptuneFFA.getInstance(), () -> {
+            int slot = dev.yowsef.neptuneffa.config.FfaConfig.get().getLobbyItemSlot();
             for (Player player : Bukkit.getOnlinePlayers()) {
                 IProfile profile = API.getProfile(player.getUniqueId());
                 if (profile != null && API.isInLobby(profile)) {
-                    // Get slot from config
-                    int slot = dev.yowsef.neptuneffa.config.FfaConfig.get().getLobbyItemSlot();
                     ItemStack item = player.getInventory().getItem(slot);
                     if (item == null || !isLobbyItem(item)) {
                         giveLobbyItem(player);
                     }
                 }
             }
-        }, 0L, 5L);
+        }, 40L, 20L);
     }
 
     @EventHandler

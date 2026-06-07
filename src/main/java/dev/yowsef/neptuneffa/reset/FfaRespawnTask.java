@@ -45,6 +45,13 @@ public class FfaRespawnTask extends BukkitRunnable {
             player.teleport(SpawnPointService.get().getSpawn(session.getSettings(), session.getCachedRandomSpawns()));
             session.getKit().giveLoadout(player.getUniqueId());
             dev.yowsef.neptuneffa.API.applyShieldPatterns(dev.yowsef.neptuneffa.API.getProfile(player.getUniqueId()), player);
+
+            // Apply spawn protection if configured for this kit
+            int protectionSecs = session.getSettings().getSpawnProtectionSeconds();
+            if (protectionSecs > 0) {
+                participant.applySpawnProtection(protectionSecs);
+            }
+
             participant.setInRespawnCountdown(false);
             cancel();
         }

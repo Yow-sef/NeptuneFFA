@@ -19,6 +19,22 @@ public class FfaParticipant {
     private UUID lastAttacker;
     private long lastAttackedTime;
 
+    // Spawn protection - timestamp in ms when protection expires (0 = not protected)
+    private long spawnProtectedUntil = 0;
+
+    public boolean isSpawnProtected() {
+        return System.currentTimeMillis() < spawnProtectedUntil;
+    }
+
+    public void applySpawnProtection(int seconds) {
+        if (seconds <= 0) return;
+        this.spawnProtectedUntil = System.currentTimeMillis() + (seconds * 1000L);
+    }
+
+    public void clearSpawnProtection() {
+        this.spawnProtectedUntil = 0;
+    }
+
     public FfaParticipant(UUID uuid, String kitName) {
         this.uuid = uuid;
         this.kitName = kitName;
