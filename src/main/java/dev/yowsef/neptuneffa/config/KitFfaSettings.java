@@ -19,6 +19,11 @@ public class KitFfaSettings {
     private int respawnDelayOverride = -1;
     private int guiSlot = -1;
     private List<String> spawnPointsRaw = new ArrayList<>();
+    private boolean broadcastJoin = true;
+    private boolean broadcastLeave = true;
+    private boolean healOnKill = false;
+    private int spawnProtectionSeconds = -1;
+    private boolean respawnInArena = true;
 
     private transient IArena cachedArena;
     private transient List<Location> cachedSpawnPoints;

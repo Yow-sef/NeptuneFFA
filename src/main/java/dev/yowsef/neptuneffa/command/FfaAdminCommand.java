@@ -44,6 +44,7 @@ public class FfaAdminCommand implements TabExecutor {
                 break;
             case "reload":
                 FfaConfig.get().reload();
+                dev.yowsef.neptuneffa.config.MessagesConfig.load();
                 FfaSessionService.getInstance().rebuildAll();
                 sendMessage(sender, "&aNeptuneFFA reloaded and sessions rebuilt.");
                 break;

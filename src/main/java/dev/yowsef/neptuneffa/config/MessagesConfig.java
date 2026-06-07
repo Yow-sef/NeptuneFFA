@@ -21,10 +21,8 @@ public class MessagesConfig {
     public static String FFA_ALREADY_IN;
 
     public static void load() {
+        FfaConfig.updateConfig("messages.yml");
         File file = new File(NeptuneFFA.getInstance().getDataFolder(), "messages.yml");
-        if (!file.exists()) {
-            NeptuneFFA.getInstance().saveResource("messages.yml", false);
-        }
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
 
         FFA_JOIN = color(config.getString("ffa-join", "&a{player} &7joined FFA &e({kit})&7."));

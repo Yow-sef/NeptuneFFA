@@ -174,6 +174,152 @@ public class KitSettingsMenu extends Menu {
             }
         });
 
+        buttons.put(20, new Button(20) {
+            @Override
+            public ItemStack getItemStack(Player p) {
+                Material mat = settings.isBroadcastJoin()
+                        ? Material.LIME_STAINED_GLASS_PANE : Material.RED_STAINED_GLASS_PANE;
+                return new ItemBuilder(mat)
+                        .name("&eBroadcast Join Message")
+                        .lore(
+                            "&7Current: " + (settings.isBroadcastJoin() ? "&aON" : "&cOFF"),
+                            "",
+                            "&7When ON, a message is sent to the session",
+                            "&7when a player joins.",
+                            "",
+                            "&7Click to toggle"
+                        )
+                        .build();
+            }
+
+            @Override
+            public void onClick(Player p, ClickType clickType) {
+                settings.setBroadcastJoin(!settings.isBroadcastJoin());
+                FfaConfig.get().saveKits();
+                open(p);
+            }
+        });
+
+        buttons.put(22, new Button(22) {
+            @Override
+            public ItemStack getItemStack(Player p) {
+                Material mat = settings.isBroadcastLeave()
+                        ? Material.LIME_STAINED_GLASS_PANE : Material.RED_STAINED_GLASS_PANE;
+                return new ItemBuilder(mat)
+                        .name("&eBroadcast Leave Message")
+                        .lore(
+                            "&7Current: " + (settings.isBroadcastLeave() ? "&aON" : "&cOFF"),
+                            "",
+                            "&7When ON, a message is sent to the session",
+                            "&7when a player leaves.",
+                            "",
+                            "&7Click to toggle"
+                        )
+                        .build();
+            }
+
+            @Override
+            public void onClick(Player p, ClickType clickType) {
+                settings.setBroadcastLeave(!settings.isBroadcastLeave());
+                FfaConfig.get().saveKits();
+                open(p);
+            }
+        });
+
+        buttons.put(24, new Button(24) {
+            @Override
+            public ItemStack getItemStack(Player p) {
+                Material mat = settings.isHealOnKill()
+                        ? Material.GOLDEN_APPLE : Material.APPLE;
+                return new ItemBuilder(mat)
+                        .name("&eHeal on Kill")
+                        .lore(
+                            "&7Current: " + (settings.isHealOnKill() ? "&aON" : "&cOFF"),
+                            "",
+                            "&7When ON, the killer's health, food,",
+                            "&7and saturation are fully restored",
+                            "&7after getting a kill.",
+                            "",
+                            "&7Click to toggle"
+                        )
+                        .build();
+            }
+
+            @Override
+            public void onClick(Player p, ClickType clickType) {
+                settings.setHealOnKill(!settings.isHealOnKill());
+                FfaConfig.get().saveKits();
+                open(p);
+            }
+        });
+
+        buttons.put(34, new Button(34) {
+            @Override
+            public ItemStack getItemStack(Player p) {
+                int secs = settings.getSpawnProtectionSeconds();
+                String display = secs <= 0 ? "&cDisabled" : "&a" + secs + "s";
+                return new ItemBuilder(Material.SHIELD)
+                        .name("&bSpawn Protection")
+                        .lore(
+                            "&7Current: " + display,
+                            "",
+                            "&7How long a freshly respawned player",
+                            "&7cannot be damaged. Attacking removes",
+                            "&7the protection immediately.",
+                            "",
+                            "&aLeft-Click: &7+1 second",
+                            "&cRight-Click: &7-1 second",
+                            "&aShift+Left: &7+5 seconds",
+                            "&cShift+Right: &7-5 seconds"
+                        )
+                        .build();
+            }
+
+            @Override
+            public void onClick(Player p, ClickType clickType) {
+                int secs = settings.getSpawnProtectionSeconds();
+                int delta = clickType.isShiftClick() ? 5 : 1;
+                if (clickType.isLeftClick()) secs += delta;
+                else if (clickType.isRightClick()) secs -= delta;
+                // Clamp: -1 = disabled, max 30 seconds
+                if (secs < -1) secs = -1;
+                if (secs > 30) secs = 30;
+                settings.setSpawnProtectionSeconds(secs);
+                FfaConfig.get().saveKits();
+                open(p);
+            }
+        });
+
+        buttons.put(36, new Button(36) {
+            @Override
+            public ItemStack getItemStack(Player p) {
+                boolean inArena = settings.isRespawnInArena();
+                Material mat = inArena ? Material.LIME_CONCRETE : Material.RED_CONCRETE;
+                return new ItemBuilder(mat)
+                        .name("&eRespawn Location")
+                        .lore(
+                            "&7Current: " + (inArena ? "&aInside Arena" : "&cNeptune Lobby"),
+                            "",
+                            "&aInside Arena: &7Players respawn in the FFA",
+                            "&7arena after a configurable countdown.",
+                            "",
+                            "&cNeptune Lobby: &7Players are sent back to",
+                            "&7the lobby on death and must manually",
+                            "&7rejoin through the FFA menu.",
+                            "",
+                            "&7Click to toggle"
+                        )
+                        .build();
+            }
+
+            @Override
+            public void onClick(Player p, ClickType clickType) {
+                settings.setRespawnInArena(!settings.isRespawnInArena());
+                FfaConfig.get().saveKits();
+                open(p);
+            }
+        });
+
         buttons.put(49, new Button(49) {
             @Override
             public ItemStack getItemStack(Player p) {
