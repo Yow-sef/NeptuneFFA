@@ -136,14 +136,31 @@ public class FfaSession {
         FfaStatsManager.PlayerStats stats = FfaStatsManager.get().getStats(player.getUniqueId(), kit.getName());
         stats.setSessions(stats.getSessions() + 1);
 
-        broadcastToSession(MessagesConfig.FFA_JOIN
-                .replace("{player}", player.getName())
-                .replace("{kit}", kit.getDisplayName()));
+        if (API.kitIs(kit, "showHP")) {
+            showHealth(player);
+        }
+
+        if (settings.isBroadcastJoin()) {
+            broadcastToSession(MessagesConfig.FFA_JOIN
+                    .replace("{player}", player.getName())
+                    .replace("{kit}", kit.getDisplayName()));
+        }
     }
 
     public void removePlayer(UUID uuid, String message, boolean toLobby) {
         FfaParticipant p = getParticipant(uuid);
         if (p == null) return;
+
+        // Broadcast leave message if enabled for this kit
+        String playerName = Bukkit.getPlayer(uuid) != null
+                ? Bukkit.getPlayer(uuid).getName()
+                : uuid.toString();
+        if (settings.isBroadcastLeave() && !MessagesConfig.FFA_LEAVE.isEmpty()) {
+            broadcastToSession(MessagesConfig.FFA_LEAVE
+                    .replace("{player}", playerName)
+                    .replace("{kit}", kit.getDisplayName()));
+        }
+
         participants.remove(p);
         participantMap.remove(uuid);
 
@@ -154,12 +171,22 @@ public class FfaSession {
 
         if (player != null) {
             if (!message.isEmpty()) FormatUtil.sendMessage(player, message);
-            player.setGameMode(org.bukkit.GameMode.ADVENTURE);
+            // Pull player out of spectator (respawn countdown) - Neptune-toLobby() handles final game mode
+            if (player.getGameMode() == org.bukkit.GameMode.SPECTATOR) {
+                player.setGameMode(org.bukkit.GameMode.SURVIVAL);
+            }
+            hideHealth(player);
+            if (toLobby) {
+                FormatUtil.resetPlayer(player);
+            }
         }
 
         // Transition profile back to lobby state
         if (toLobby && profile != null) {
             profile.toLobby(); // handles state transition internally
+            if (player != null) {
+                player.setGameMode(org.bukkit.GameMode.ADVENTURE);
+            }
         } else if (!toLobby && profile != null && profile.hasState("IN_FFA")) {
             // Set fallback state if disconnected
             profile.setState("neptune:in_lobby");
@@ -207,6 +234,18 @@ public class FfaSession {
 
                 // Update rank leaderboards
                 FfaRankingService.getInstance().update(killer.getUniqueId(), kit.getName());
+
+                // Heal on kill — restore HP and saturation as a kill reward if enabled
+                if (settings.isHealOnKill()) {
+                    org.bukkit.attribute.AttributeInstance maxHealthAttr = killer.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH);
+                    if (maxHealthAttr != null) {
+                        killer.setHealth(maxHealthAttr.getValue());
+                    } else {
+                        killer.setHealth(20.0);
+                    }
+                    killer.setFoodLevel(20);
+                    killer.setSaturation(20f);
+                }
             }
         }
 
@@ -215,8 +254,17 @@ public class FfaSession {
                 .replace("{victim}", victim.getName())
                 .replace("{victim_session_kills}", String.valueOf(victimP.getSessionKills())));
 
-        int delay = settings.getRespawnDelayOverride() != -1 ? settings.getRespawnDelayOverride() : FfaConfig.get().getGlobalRespawnDelay();
-        new FfaRespawnTask(this, victim, delay).runTaskTimer(NeptuneFFA.getInstance(), 0L, 20L);
+        if (settings.isRespawnInArena()) {
+            // Default behaviour: countdown then teleport back into arena
+            int delay = settings.getRespawnDelayOverride() != -1
+                    ? settings.getRespawnDelayOverride()
+                    : FfaConfig.get().getGlobalRespawnDelay();
+            new FfaRespawnTask(this, victim, delay).runTaskTimer(NeptuneFFA.getInstance(), 0L, 20L);
+        } else {
+            // Send to lobby immediately — player must manually rejoin
+            removePlayer(victim.getUniqueId(),
+                    "&cYou died. Use the FFA menu to rejoin.", true);
+        }
     }
 
     public FfaParticipant getParticipant(UUID uuid) {
@@ -252,5 +300,38 @@ public class FfaSession {
         if (profile != null) {
             profile.getGameData().setPersistentData(key, value);
         }
+    }
+
+    private void showHealth(Player player) {
+        try {
+            org.bukkit.scoreboard.Scoreboard scoreboard = player.getScoreboard();
+            org.bukkit.scoreboard.Objective objective = scoreboard.getObjective("neptune_health");
+            if (objective == null) {
+                try {
+                    objective = scoreboard.registerNewObjective("neptune_health", org.bukkit.scoreboard.Criteria.HEALTH, FormatUtil.color("&c❤"));
+                } catch (NoClassDefFoundError | NoSuchFieldError | NoSuchMethodError e) {
+                    objective = scoreboard.registerNewObjective("neptune_health", "health", FormatUtil.color("&c❤"));
+                }
+            }
+            try {
+                objective.setDisplaySlot(org.bukkit.scoreboard.DisplaySlot.BELOW_NAME);
+            } catch (IllegalStateException ignored) {}
+            
+            player.damage(0.001);
+        } catch (Exception ignored) {}
+    }
+
+    private void hideHealth(Player player) {
+        try {
+            org.bukkit.scoreboard.Scoreboard scoreboard = player.getScoreboard();
+            org.bukkit.scoreboard.Objective objective = scoreboard.getObjective(org.bukkit.scoreboard.DisplaySlot.BELOW_NAME);
+            if (objective != null && objective.getName().equals("neptune_health")) {
+                objective.unregister();
+            }
+            org.bukkit.scoreboard.Objective objByName = scoreboard.getObjective("neptune_health");
+            if (objByName != null) {
+                objByName.unregister();
+            }
+        } catch (Exception ignored) {}
     }
 }

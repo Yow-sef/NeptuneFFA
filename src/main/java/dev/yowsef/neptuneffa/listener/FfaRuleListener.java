@@ -55,6 +55,12 @@ public class FfaRuleListener implements Listener {
         if (session == null) return;
         IKit kit = session.getKit();
 
+        FfaParticipant p = session.getParticipant(player.getUniqueId());
+        if (p != null && (p.isInRespawnCountdown() || p.isSpawnProtected())) {
+            event.setCancelled(true);
+            return;
+        }
+
         event.setCancelled(false);
 
         if (event.getCause() == EntityDamageEvent.DamageCause.FALL && !API.kitIs(kit, "fallDamage")) {
@@ -74,7 +80,6 @@ public class FfaRuleListener implements Listener {
             }
             event.setCancelled(true);
             player.setHealth(20.0f);
-            FfaParticipant p = session.getParticipant(player.getUniqueId());
             Player killer = null;
             if (p != null && p.getValidAttacker() != null) {
                 killer = Bukkit.getPlayer(p.getValidAttacker());
@@ -104,6 +109,13 @@ public class FfaRuleListener implements Listener {
             return;
         }
 
+        // Cancel damage if victim has active spawn protection
+        if (victimP != null && victimP.isSpawnProtected()) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // If the attacker has spawn protection and is attacking, remove their protection
         Player attacker = null;
         if (event.getDamager() instanceof Player) {
             attacker = (Player) event.getDamager();
@@ -111,8 +123,14 @@ public class FfaRuleListener implements Listener {
             attacker = (Player) arrow.getShooter();
         }
 
-        if (attacker != null && victimP != null) {
-            victimP.setLastAttacker(attacker.getUniqueId());
+        if (attacker != null) {
+            FfaParticipant attackerP = session.getParticipant(attacker.getUniqueId());
+            if (attackerP != null && attackerP.isSpawnProtected()) {
+                attackerP.clearSpawnProtection(); // Lose protection when you attack
+            }
+            if (victimP != null) {
+                victimP.setLastAttacker(attacker.getUniqueId());
+            }
         }
     }
 
@@ -275,8 +293,25 @@ public class FfaRuleListener implements Listener {
         Player player = event.getPlayer();
         if (!isInFfa(player)) return;
 
+        String cmd = event.getMessage().toLowerCase().trim();
+
+        // Handle /leave command to cleanly leave FFA
+        if (cmd.startsWith("/leave")) {
+            FfaSession session = getSession(player);
+            if (session != null) {
+                FfaParticipant p = session.getParticipant(player.getUniqueId());
+                if (p != null && p.isCombatTagged() && !player.hasPermission("neptuneffa.admin")) {
+                    event.setCancelled(true);
+                    dev.yowsef.neptuneffa.util.FormatUtil.sendMessage(player, "&cYou cannot use commands while in combat!");
+                    return;
+                }
+                event.setCancelled(true);
+                session.removePlayer(player.getUniqueId(), "&cYou left FFA.", true);
+                return;
+            }
+        }
+
         // Allow /ffa leave
-        String cmd = event.getMessage().toLowerCase();
         if (cmd.startsWith("/ffa leave") || cmd.equals("/ffa")) return;
 
         FfaSession session = getSession(player);

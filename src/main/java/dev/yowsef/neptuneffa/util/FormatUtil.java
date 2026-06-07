@@ -13,16 +13,19 @@ public class FormatUtil {
     private static final Method NEPTUNE_SEND_MSG;
     private static final Method CC_RETURN_MESSAGE;
     private static final Method PLAYER_SEND_ACTION_BAR;
+    private static final Method PLAYER_UTIL_RESET;
 
     static {
         Method sendMsg = null;
         Method returnMsg = null;
         Method sendActionBar = null;
+        Method reset = null;
         try {
             Class<?> pu = Class.forName("dev.lrxh.neptune.utils.PlayerUtil");
             sendMsg = pu.getMethod("sendMessage", UUID.class, String.class);
+            reset = pu.getMethod("reset", org.bukkit.entity.Player.class);
         } catch (Exception e) {
-            Logger.getLogger("NeptuneFFA").warning("[NeptuneFFA] PlayerUtil.sendMessage not found via reflection: " + e.getMessage());
+            Logger.getLogger("NeptuneFFA").warning("[NeptuneFFA] PlayerUtil reflection not found: " + e.getMessage());
         }
         try {
             Class<?> cc = Class.forName("dev.lrxh.neptune.utils.CC");
@@ -36,6 +39,7 @@ public class FormatUtil {
         NEPTUNE_SEND_MSG = sendMsg;
         CC_RETURN_MESSAGE = returnMsg;
         PLAYER_SEND_ACTION_BAR = sendActionBar;
+        PLAYER_UTIL_RESET = reset;
     }
 
     public static String color(String s) {
@@ -71,5 +75,16 @@ public class FormatUtil {
         // Fallback to legacy action bar
         player.spigot().sendMessage(net.md_5.bungee.api.ChatMessageType.ACTION_BAR,
                 net.md_5.bungee.api.chat.TextComponent.fromLegacyText(color(message)));
+    }
+
+    public static void resetPlayer(Player player) {
+        if (player == null) return;
+        if (PLAYER_UTIL_RESET != null) {
+            try {
+                PLAYER_UTIL_RESET.invoke(null, player);
+            } catch (Exception e) {
+                Logger.getLogger("NeptuneFFA").warning("[NeptuneFFA] Failed to reset player: " + e.getMessage());
+            }
+        }
     }
 }
