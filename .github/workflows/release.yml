@@ -65,3 +65,18 @@ jobs:
         run: |
           VERSION=${{ steps.get_version.outputs.VERSION }}
           gh release create "v$VERSION" target/NeptuneFFA-$VERSION.jar --title "v$VERSION" --generate-notes
+
+      - name: Publish to Modrinth
+        if: steps.check_release.outputs.exists == 'false'
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          modrinth-id: ${{ secrets.MODRINTH_PROJECT_ID }}
+          version: ${{ steps.get_version.outputs.VERSION }}
+          name: v${{ steps.get_version.outputs.VERSION }}
+          files: target/NeptuneFFA-${{ steps.get_version.outputs.VERSION }}.jar
+          loaders: |
+            spigot
+            paper
+          game-versions: |
+            1.21.11
