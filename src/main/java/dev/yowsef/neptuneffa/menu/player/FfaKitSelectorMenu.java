@@ -8,7 +8,7 @@ import dev.yowsef.neptuneffa.session.FfaSessionService;
 import dev.yowsef.neptuneffa.util.FormatUtil;
 import dev.yowsef.neptuneffa.util.ItemBuilder;
 import dev.yowsef.neptuneffa.util.menu.Button;
-import dev.yowsef.neptuneffa.util.menu.Menu;
+import dev.yowsef.neptuneffa.util.menu.PaginatedMenu;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
@@ -17,10 +17,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class FfaKitSelectorMenu extends Menu {
+public class FfaKitSelectorMenu extends PaginatedMenu {
 
     public FfaKitSelectorMenu() {
-        super(FormatUtil.color(FfaConfig.get().getMenuTitle()), FfaConfig.get().getMenuSize());
+        super(FormatUtil.color(FfaConfig.get().getMenuTitle()));
     }
 
     @Override
@@ -29,7 +29,7 @@ public class FfaKitSelectorMenu extends Menu {
     }
 
     @Override
-    public Map<Integer, Button> getButtons(Player player) {
+    public Map<Integer, Button> getAllPagesButtons(Player player) {
         Map<Integer, Button> buttons = new HashMap<>();
         if (!API.isAvailable()) {
             return buttons;
@@ -39,13 +39,11 @@ public class FfaKitSelectorMenu extends Menu {
                 .filter(k -> FfaSessionService.getInstance().isKitFfaEligible(k))
                 .toList();
 
-        int size = FfaConfig.get().getMenuSize();
-
         // 1. Place kits with specific slots configured
         Map<IKit, Integer> autoKits = new HashMap<>();
         for (IKit kit : kits) {
             KitFfaSettings settings = FfaConfig.get().getKitSettings(kit);
-            if (settings != null && settings.getGuiSlot() >= 0 && settings.getGuiSlot() < size) {
+            if (settings != null && settings.getGuiSlot() >= 0) {
                 buttons.put(settings.getGuiSlot(), new FfaKitButton(settings.getGuiSlot(), kit));
             } else {
                 autoKits.put(kit, -1);
@@ -55,20 +53,23 @@ public class FfaKitSelectorMenu extends Menu {
         // 2. Place auto-allocated kits (guiSlot == -1) in first available empty slots
         for (IKit kit : autoKits.keySet()) {
             int emptySlot = -1;
-            for (int i = 0; i < size; i++) {
+            for (int i = 0; ; i++) {
                 if (!buttons.containsKey(i)) {
                     emptySlot = i;
                     break;
                 }
             }
-            if (emptySlot != -1) {
-                buttons.put(emptySlot, new FfaKitButton(emptySlot, kit));
-            }
+            buttons.put(emptySlot, new FfaKitButton(emptySlot, kit));
         }
 
         // 3. Fill remaining slots with the filler item if enabled
         if (FfaConfig.get().isMenuFillerEnabled()) {
-            for (int i = 0; i < size; i++) {
+            int maxSlot = buttons.isEmpty() ? 0 : java.util.Collections.max(buttons.keySet());
+            int remainder = (maxSlot + 1) % 45;
+            int totalSlots = remainder == 0 ? maxSlot + 1 : maxSlot + 1 + (45 - remainder);
+            if (totalSlots == 0) totalSlots = 45; // at least one page
+
+            for (int i = 0; i < totalSlots; i++) {
                 if (!buttons.containsKey(i)) {
                     buttons.put(i, new Button(i) {
                         @Override
