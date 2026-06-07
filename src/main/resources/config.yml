@@ -42,3 +42,6 @@ ffa:
       - " "
       - "&bserver.net"
       - "&7&m--------------------"
+
+# Configuration version - do not change this value.
+config-version: 1

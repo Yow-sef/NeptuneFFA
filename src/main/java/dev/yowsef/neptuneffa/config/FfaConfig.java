@@ -7,6 +7,10 @@ import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -49,7 +53,38 @@ public class FfaConfig {
         return INSTANCE;
     }
 
+    public static void updateConfig(String fileName) {
+        File file = new File(NeptuneFFA.getInstance().getDataFolder(), fileName);
+        if (!file.exists()) {
+            NeptuneFFA.getInstance().saveResource(fileName, false);
+            return;
+        }
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        InputStream defaultStream = NeptuneFFA.getInstance().getResource(fileName);
+        if (defaultStream != null) {
+            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defaultStream, StandardCharsets.UTF_8));
+            boolean changed = false;
+            for (String key : defaultConfig.getKeys(true)) {
+                if (!defaultConfig.isConfigurationSection(key)) {
+                    if (!config.contains(key)) {
+                        config.set(key, defaultConfig.get(key));
+                        changed = true;
+                    }
+                }
+            }
+            if (changed) {
+                try {
+                    config.save(file);
+                    NeptuneFFA.getInstance().getLogger().info("Updated configuration file " + fileName + " with new default values.");
+                } catch (IOException e) {
+                    NeptuneFFA.getInstance().getLogger().severe("Could not save updated configuration file " + fileName + ": " + e.getMessage());
+                }
+            }
+        }
+    }
+
     public void reload() {
+        updateConfig("config.yml");
         NeptuneFFA.getInstance().saveDefaultConfig();
         NeptuneFFA.getInstance().reloadConfig();
         FileConfiguration config = NeptuneFFA.getInstance().getConfig();
@@ -100,6 +135,7 @@ public class FfaConfig {
 
         if (kitsConfig.getConfigurationSection("kits") == null) return;
 
+        boolean needsSave = false;
         for (String key : kitsConfig.getConfigurationSection("kits").getKeys(false)) {
             KitFfaSettings settings = new KitFfaSettings(key);
             settings.setEnabled(kitsConfig.getBoolean("kits." + key + ".enabled"));
@@ -109,7 +145,48 @@ public class FfaConfig {
             settings.setRespawnDelayOverride(kitsConfig.getInt("kits." + key + ".respawn-delay-override", -1));
             settings.setGuiSlot(kitsConfig.getInt("kits." + key + ".gui-slot", -1));
             settings.setSpawnPointsRaw(kitsConfig.getStringList("kits." + key + ".spawn-points"));
+            
+            String path = "kits." + key + ".";
+            
+            if (!kitsConfig.contains(path + "broadcast-join")) {
+                settings.setBroadcastJoin(true);
+                needsSave = true;
+            } else {
+                settings.setBroadcastJoin(kitsConfig.getBoolean(path + "broadcast-join"));
+            }
+            
+            if (!kitsConfig.contains(path + "broadcast-leave")) {
+                settings.setBroadcastLeave(true);
+                needsSave = true;
+            } else {
+                settings.setBroadcastLeave(kitsConfig.getBoolean(path + "broadcast-leave"));
+            }
+
+            if (!kitsConfig.contains(path + "heal-on-kill")) {
+                settings.setHealOnKill(false);
+                needsSave = true;
+            } else {
+                settings.setHealOnKill(kitsConfig.getBoolean(path + "heal-on-kill"));
+            }
+
+            if (!kitsConfig.contains(path + "spawn-protection-seconds")) {
+                settings.setSpawnProtectionSeconds(-1);
+                needsSave = true;
+            } else {
+                settings.setSpawnProtectionSeconds(kitsConfig.getInt(path + "spawn-protection-seconds"));
+            }
+
+            if (!kitsConfig.contains(path + "respawn-in-arena")) {
+                settings.setRespawnInArena(true);
+                needsSave = true;
+            } else {
+                settings.setRespawnInArena(kitsConfig.getBoolean(path + "respawn-in-arena"));
+            }
+            
             kitSettings.put(key, settings);
+        }
+        if (needsSave) {
+            saveKits();
         }
     }
 
@@ -126,6 +203,11 @@ public class FfaConfig {
             kitsConfig.set(path + ".respawn-delay-override", settings.getRespawnDelayOverride());
             kitsConfig.set(path + ".gui-slot", settings.getGuiSlot());
             kitsConfig.set(path + ".spawn-points", settings.getSpawnPointsRaw());
+            kitsConfig.set(path + ".broadcast-join", settings.isBroadcastJoin());
+            kitsConfig.set(path + ".broadcast-leave", settings.isBroadcastLeave());
+            kitsConfig.set(path + ".heal-on-kill", settings.isHealOnKill());
+            kitsConfig.set(path + ".spawn-protection-seconds", settings.getSpawnProtectionSeconds());
+            kitsConfig.set(path + ".respawn-in-arena", settings.isRespawnInArena());
         }
 
         try {
