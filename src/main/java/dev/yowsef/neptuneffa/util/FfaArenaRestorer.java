@@ -79,7 +79,12 @@ public class FfaArenaRestorer {
         if (!file.exists()) return false;
 
         Location min = arena.getMin();
+        Location max = arena.getMax();
         World world = min.getWorld();
+
+        int minX = Math.min(min.getBlockX(), max.getBlockX());
+        int minY = Math.min(min.getBlockY(), max.getBlockY());
+        int minZ = Math.min(min.getBlockZ(), max.getBlockZ());
 
         try {
             com.sk89q.worldedit.extent.clipboard.Clipboard clipboard;
@@ -105,9 +110,9 @@ public class FfaArenaRestorer {
                         .checkMemory(false)
                         .limitUnlimited()
                         .build()) {
-                        // Use arena.getMin() directly — never trust clipboard.getOrigin() after disk round-trip
+                        // Use sorted minimum coordinates directly — never trust clipboard.getOrigin() after disk round-trip
                         com.sk89q.worldedit.math.BlockVector3 pasteTarget = com.sk89q.worldedit.math.BlockVector3.at(
-                            min.getBlockX(), min.getBlockY(), min.getBlockZ()
+                            minX, minY, minZ
                         );
                         try (com.sk89q.worldedit.session.ClipboardHolder holder = new com.sk89q.worldedit.session.ClipboardHolder(clipboard)) {
                             com.sk89q.worldedit.function.operation.Operation op = holder
