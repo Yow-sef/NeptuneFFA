@@ -1,5 +1,7 @@
 package dev.yowsef.neptuneffa.util.menu;
 
+import dev.yowsef.neptuneffa.config.FfaConfig;
+import dev.yowsef.neptuneffa.util.FormatUtil;
 import dev.yowsef.neptuneffa.util.ItemBuilder;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -12,11 +14,12 @@ import java.util.Map;
 public abstract class PaginatedMenu extends Menu {
     private int page = 1;
 
-    // Default size 54 slots
+    // Default constructor — 54 slots
     public PaginatedMenu(String title) {
         this(title, 54);
     }
 
+    // Size-aware constructor
     public PaginatedMenu(String title, int size) {
         super(title, size);
     }
@@ -24,6 +27,11 @@ public abstract class PaginatedMenu extends Menu {
     // Content slots = all rows except the last one (navigation row)
     private int getContentSlots() {
         return getSize() - 9;
+    }
+
+    // Whether menu filler is enabled for this paginated menu
+    public boolean isFillerEnabled() {
+        return false;
     }
 
     @Override
@@ -54,9 +62,11 @@ public abstract class PaginatedMenu extends Menu {
                 buttons.put(slot, button);
             }
         }
-        // previous page
+
+        // Navigation arrows in the last row of the menu
+        // Previous page: left side of last row
         int prevSlot = getSize() - 9;
-        // Next page
+        // Next page: right side of last row
         int nextSlot = getSize() - 1;
 
         if (page > 1) {
@@ -91,6 +101,25 @@ public abstract class PaginatedMenu extends Menu {
                     open(p);
                 }
             });
+        }
+
+        // Fill remaining slots (including empty navigation row slots) if filler is enabled
+        if (isFillerEnabled()) {
+            for (int i = 0; i < getSize(); i++) {
+                if (!buttons.containsKey(i)) {
+                    final int fillerSlot = i;
+                    buttons.put(fillerSlot, new Button(fillerSlot) {
+                        @Override
+                        public ItemStack getItemStack(Player p) {
+                            return new ItemBuilder(FfaConfig.get().getMenuFillerMaterial())
+                                    .name(FormatUtil.color(FfaConfig.get().getMenuFillerName()))
+                                    .build();
+                        }
+                        @Override
+                        public void onClick(Player p, ClickType clickType) {}
+                    });
+                }
+            }
         }
 
         return buttons;

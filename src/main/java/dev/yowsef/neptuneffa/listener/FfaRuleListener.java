@@ -18,6 +18,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockDropItemEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason;
@@ -202,9 +203,23 @@ public class FfaRuleListener implements Listener {
 
         if (arena != null && API.kitIs(session.getKit(), "arenaBreak") && arena.getWhitelistedBlocks().contains(event.getBlock().getType())) {
             event.setDropItems(false); 
+            return;
         }
 
         event.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    public void onBlockDropItem(BlockDropItemEvent event) {
+        Player player = event.getPlayer();
+        FfaSession session = getSession(player);
+        if (session == null) return;
+
+        if (API.kitIs(session.getKit(), "build")) {
+            event.setCancelled(false);
+        } else {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler

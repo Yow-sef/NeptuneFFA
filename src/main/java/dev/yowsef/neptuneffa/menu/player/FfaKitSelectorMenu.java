@@ -62,34 +62,11 @@ public class FfaKitSelectorMenu extends PaginatedMenu {
             buttons.put(emptySlot, new FfaKitButton(emptySlot, kit));
         }
 
-        // 3. Fill remaining slots with the filler item if enabled
-        if (FfaConfig.get().isMenuFillerEnabled()) {
-
-            int contentSlots = FfaConfig.get().getMenuSize() - 9;
-            int maxSlot = buttons.isEmpty() ? 0 : java.util.Collections.max(buttons.keySet());
-            int remainder = (maxSlot + 1) % contentSlots;
-            int totalSlots = remainder == 0
-                    ? maxSlot + 1
-                    : maxSlot + 1 + (contentSlots - remainder);
-            if (totalSlots == 0) totalSlots = contentSlots;
-
-            for (int i = 0; i < totalSlots; i++) {
-                if (!buttons.containsKey(i)) {
-                    final int fillerSlot = i;
-                    buttons.put(fillerSlot, new Button(fillerSlot) {
-                        @Override
-                        public ItemStack getItemStack(Player p) {
-                            return new ItemBuilder(FfaConfig.get().getMenuFillerMaterial())
-                                    .name(FormatUtil.color(FfaConfig.get().getMenuFillerName()))
-                                    .build();
-                        }
-                        @Override
-                        public void onClick(Player p, ClickType clickType) {}
-                    });
-                }
-            }
-        }
-
         return buttons;
+    }
+
+    @Override
+    public boolean isFillerEnabled() {
+        return FfaConfig.get().isMenuFillerEnabled();
     }
 }
