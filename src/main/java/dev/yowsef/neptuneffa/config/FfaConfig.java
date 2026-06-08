@@ -102,7 +102,13 @@ public class FfaConfig {
         }
 
         this.menuTitle = config.getString("ffa.menu.title", "Free For All");
-        this.menuSize = config.getInt("ffa.menu.size", 54);
+        int rawSize = config.getInt("ffa.menu.size", 54);
+        // to nearest valid chest size
+        int[] validSizes = {9, 18, 27, 36, 45, 54};
+        this.menuSize = 54;
+        for (int valid : validSizes) {
+            if (rawSize <= valid) { this.menuSize = valid; break; }
+        }
         this.menuFillerEnabled = config.getBoolean("ffa.menu.filler.enabled", true);
         try {
             this.menuFillerMaterial = Material.valueOf(config.getString("ffa.menu.filler.material", "BLACK_STAINED_GLASS_PANE"));
@@ -182,6 +188,13 @@ public class FfaConfig {
             } else {
                 settings.setRespawnInArena(kitsConfig.getBoolean(path + "respawn-in-arena"));
             }
+
+            if (!kitsConfig.contains(path + "rekit-on-kill")) {
+                settings.setRekitOnKill(false);
+                needsSave = true;
+            } else {
+                settings.setRekitOnKill(kitsConfig.getBoolean(path + "rekit-on-kill"));
+            }
             
             kitSettings.put(key, settings);
         }
@@ -208,6 +221,7 @@ public class FfaConfig {
             kitsConfig.set(path + ".heal-on-kill", settings.isHealOnKill());
             kitsConfig.set(path + ".spawn-protection-seconds", settings.getSpawnProtectionSeconds());
             kitsConfig.set(path + ".respawn-in-arena", settings.isRespawnInArena());
+            kitsConfig.set(path + ".rekit-on-kill", settings.isRekitOnKill());
         }
 
         try {

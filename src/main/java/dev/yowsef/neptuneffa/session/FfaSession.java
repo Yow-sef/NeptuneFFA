@@ -235,6 +235,12 @@ public class FfaSession {
                 // Update rank leaderboards
                 FfaRankingService.getInstance().update(killer.getUniqueId(), kit.getName());
 
+                // Rekit on kill full kit with durability
+                if (settings.isRekitOnKill()) {
+                    kit.giveLoadout(killer.getUniqueId());
+                    API.applyShieldPatterns(API.getProfile(killer.getUniqueId()), killer);
+                }
+
                 // Heal on kill — restore HP and saturation as a kill reward if enabled
                 if (settings.isHealOnKill()) {
                     org.bukkit.attribute.AttributeInstance maxHealthAttr = killer.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH);

@@ -24,6 +24,7 @@ public class KitFfaSettings {
     private boolean healOnKill = false;
     private int spawnProtectionSeconds = -1;
     private boolean respawnInArena = true;
+    private boolean rekitOnKill = false;
 
     private transient IArena cachedArena;
     private transient List<Location> cachedSpawnPoints;

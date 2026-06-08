@@ -201,7 +201,7 @@ public class FfaRuleListener implements Listener {
         }
 
         if (arena != null && API.kitIs(session.getKit(), "arenaBreak") && arena.getWhitelistedBlocks().contains(event.getBlock().getType())) {
-            return;
+            event.setDropItems(false); 
         }
 
         event.setCancelled(true);
@@ -259,7 +259,31 @@ public class FfaRuleListener implements Listener {
         FfaSession session = getSession(player);
         if (session == null) return;
         event.setCancelled(false);
-        event.setCancelled(true);
+        // Only allow drops in kits with BUILD enabled
+        if (!API.kitIs(session.getKit(), "build")) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    public void onItemSpawn(ItemSpawnEvent event) {
+        FfaSession session = FfaSessionService.getInstance()
+                .getSessionByLocation(event.getLocation());
+        if (session == null) return;
+        // Allow items to exist inside FFA arenas  Neptune cancels these (in_game)
+        event.setCancelled(false);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    public void onPickupItem(EntityPickupItemEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        FfaSession session = getSession(player);
+        if (session == null) return;
+        event.setCancelled(false);
+        // Only allow pickup in kits with BUILD . no reason to pick up items in combat-only kits
+        if (!API.kitIs(session.getKit(), "build")) {
+            event.setCancelled(true);
+        }
     }
 
 

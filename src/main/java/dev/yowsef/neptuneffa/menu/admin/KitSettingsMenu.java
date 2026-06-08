@@ -253,6 +253,35 @@ public class KitSettingsMenu extends Menu {
             }
         });
 
+        buttons.put(26, new Button(26) {
+            @Override
+            public ItemStack getItemStack(Player p) {
+                Material mat = settings.isRekitOnKill()
+                        ? Material.DIAMOND_SWORD : Material.WOODEN_SWORD;
+                return new ItemBuilder(mat)
+                        .name("&eRekit on Kill")
+                        .lore(
+                            "&7Current: " + (settings.isRekitOnKill() ? "&aON" : "&cOFF"),
+                            "",
+                            "&7When ON, the killer instantly receives",
+                            "&7a fresh kit with full durability after",
+                            "&7each kill.",
+                            "",
+                            "&7Runs before Heal on Kill.",
+                            "",
+                            "&7Click to toggle"
+                        )
+                        .build();
+            }
+
+            @Override
+            public void onClick(Player p, ClickType clickType) {
+                settings.setRekitOnKill(!settings.isRekitOnKill());
+                FfaConfig.get().saveKits();
+                open(p);
+            }
+        });
+
         buttons.put(34, new Button(34) {
             @Override
             public ItemStack getItemStack(Player p) {
