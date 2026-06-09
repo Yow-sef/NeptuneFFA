@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
@@ -24,19 +25,57 @@ import java.util.List;
 public class FfaLobbyItemListener implements Listener {
 
     public FfaLobbyItemListener() {
-        // Periodic check to ensure lobby item is present
+        // Periodic check to ensure lobby item is present or removed
         Bukkit.getScheduler().runTaskTimer(NeptuneFFA.getInstance(), () -> {
             int slot = dev.yowsef.neptuneffa.config.FfaConfig.get().getLobbyItemSlot();
             for (Player player : Bukkit.getOnlinePlayers()) {
-                IProfile profile = API.getProfile(player.getUniqueId());
-                if (profile != null && API.isInLobby(profile)) {
+                if (shouldHaveLobbyItem(player)) {
                     ItemStack item = player.getInventory().getItem(slot);
                     if (item == null || !isLobbyItem(item)) {
                         giveLobbyItem(player);
                     }
+                } else {
+                    removeLobbyItem(player);
                 }
             }
-        }, 40L, 20L);
+        }, 40L, 10L); 
+    }
+
+    public static boolean shouldHaveLobbyItem(Player player) {
+        dev.yowsef.neptuneffa.config.FfaConfig cfg = dev.yowsef.neptuneffa.config.FfaConfig.get();
+        if (!cfg.isLobbyItemEnabled()) return false;
+
+        IProfile profile = API.getProfile(player.getUniqueId());
+        if (profile == null) return false;
+
+        // Must be in lobby
+        if (!API.isInLobby(profile)) return false;
+
+        // Must NOT be in the kit editor state
+        String state = profile.getProfileState();
+        if (state != null && (state.equalsIgnoreCase("neptune:in_kiteditor") || state.equalsIgnoreCase("IN_KIT_EDITOR"))) {
+            return false;
+        }
+
+        // Must NOT be in a Neptune kit setup procedure
+        if (isInsideKitProcedure(profile)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static boolean isInsideKitProcedure(IProfile profile) {
+        try {
+            Object kitProcedure = profile.getClass().getMethod("getKitProcedure").invoke(profile);
+            if (kitProcedure != null) {
+                Object type = kitProcedure.getClass().getMethod("getType").invoke(kitProcedure);
+                if (type != null && !type.toString().equalsIgnoreCase("NONE")) {
+                    return true;
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
     }
 
     @EventHandler
@@ -45,7 +84,7 @@ public class FfaLobbyItemListener implements Listener {
             ItemStack item = event.getItem();
             if (item == null || item.getType() == Material.AIR) return;
 
-            if (isLobbyItem(item)) {
+            if (isLobbyItem(item) && shouldHaveLobbyItem(event.getPlayer())) {
                 new FfaKitSelectorMenu().open(event.getPlayer());
             }
         }
@@ -55,28 +94,28 @@ public class FfaLobbyItemListener implements Listener {
     public void onJoin(PlayerJoinEvent event) {
         Bukkit.getScheduler().runTaskLater(NeptuneFFA.getInstance(), () -> {
             Player player = event.getPlayer();
-            IProfile profile = API.getProfile(player.getUniqueId());
-            if (profile != null && API.isInLobby(profile)) {
+            if (shouldHaveLobbyItem(player)) {
                 giveLobbyItem(player);
+            } else {
+                removeLobbyItem(player);
             }
         }, 1L);
     }
 
-    // Re-give lobby item when player returns
     @EventHandler
     public void onTeleport(PlayerTeleportEvent event) {
         Bukkit.getScheduler().runTaskLater(NeptuneFFA.getInstance(), () -> {
             Player player = event.getPlayer();
             if (!player.isOnline()) return;
-            IProfile profile = API.getProfile(player.getUniqueId());
-            if (profile != null && API.isInLobby(profile)) {
+            if (shouldHaveLobbyItem(player)) {
                 giveLobbyItem(player);
+            } else {
+                removeLobbyItem(player);
             }
         }, 2L);
     }
 
     public static void giveLobbyItem(Player player) {
-        // Read config values
         dev.yowsef.neptuneffa.config.FfaConfig cfg = dev.yowsef.neptuneffa.config.FfaConfig.get();
         if (!cfg.isLobbyItemEnabled()) return;
 
@@ -106,6 +145,26 @@ public class FfaLobbyItemListener implements Listener {
                item.getItemMeta().getPersistentDataContainer().has(ffaKey, PersistentDataType.BYTE);
     }
 
+    public static void removeLobbyItem(Player player) {
+        boolean changed = false;
+        ItemStack[] contents = player.getInventory().getContents();
+        for (int i = 0; i < contents.length; i++) {
+            ItemStack item = contents[i];
+            if (isLobbyItem(item)) {
+                player.getInventory().setItem(i, null);
+                changed = true;
+            }
+        }
+        ItemStack cursor = player.getItemOnCursor();
+        if (isLobbyItem(cursor)) {
+            player.setItemOnCursor(null);
+            changed = true;
+        }
+        if (changed) {
+            player.updateInventory();
+        }
+    }
+
     @EventHandler
     public void onDrop(org.bukkit.event.player.PlayerDropItemEvent event) {
         if (isLobbyItem(event.getItemDrop().getItemStack())) {
@@ -114,7 +173,7 @@ public class FfaLobbyItemListener implements Listener {
     }
 
     @EventHandler
-    public void onInventoryClick(org.bukkit.event.inventory.InventoryClickEvent event) {
+    public void onInventoryClick(InventoryClickEvent event) {
         if (isLobbyItem(event.getCurrentItem()) || isLobbyItem(event.getCursor())) {
             event.setCancelled(true);
             return;
