@@ -19,6 +19,9 @@ public class MessagesConfig {
     public static String FFA_NO_SESSION;
     public static String FFA_NOT_IN_FFA;
     public static String FFA_ALREADY_IN;
+    public static String FFA_CANT_DUEL;
+    public static String FFA_TARGET_IN_FFA;
+    public static String FFA_CANT_QUEUE;
 
     public static void load() {
         FfaConfig.updateConfig("messages.yml");
@@ -35,6 +38,9 @@ public class MessagesConfig {
         FFA_NO_SESSION = color(config.getString("ffa-no-session", "&cNo FFA session is open for that kit."));
         FFA_NOT_IN_FFA = color(config.getString("ffa-not-in-ffa", "&cYou are not in an FFA session."));
         FFA_ALREADY_IN = color(config.getString("ffa-already-in", "&cYou are already in an FFA session."));
+        FFA_CANT_DUEL = color(config.getString("ffa-cant-duel", "&cYou cannot send or accept duels while in FFA!"));
+        FFA_TARGET_IN_FFA = color(config.getString("ffa-target-in-ffa", "&cThat player is currently in FFA!"));
+        FFA_CANT_QUEUE = color(config.getString("ffa-cant-queue", "&cYou cannot queue while in FFA!"));
     }
 
     private static String color(String s) {

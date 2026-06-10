@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 
 public class FfaPlayerListener implements Listener {
 
@@ -66,6 +67,72 @@ public class FfaPlayerListener implements Listener {
         if (profile != null && profile.hasState("IN_FFA")) {
             event.setCancelled(true);
             dev.yowsef.neptuneffa.util.FormatUtil.sendMessage(player, MessagesConfig.FFA_NOT_IN_FFA);
+        }
+    }
+
+    @EventHandler
+    public void onCommandPreprocess(PlayerCommandPreprocessEvent event) {
+        Player player = event.getPlayer();
+        String message = event.getMessage().trim();
+        if (message.startsWith("/")) {
+            message = message.substring(1);
+        }
+
+        String[] parts = message.split("\\s+");
+        if (parts.length == 0) return;
+
+        String label = parts[0].toLowerCase();
+        if (label.equals("queue") || label.equals("quickqueue")) {
+            if (FfaSessionService.getInstance().getSession(player) != null) {
+                event.setCancelled(true);
+                dev.yowsef.neptuneffa.util.FormatUtil.sendMessage(player, MessagesConfig.FFA_CANT_QUEUE);
+                return;
+            }
+        }
+
+        if (label.equals("duel") || label.equals("1v1")) {
+            // Check if sender is in FFA
+            if (FfaSessionService.getInstance().getSession(player) != null) {
+                event.setCancelled(true);
+                dev.yowsef.neptuneffa.util.FormatUtil.sendMessage(player, MessagesConfig.FFA_CANT_DUEL);
+                return;
+            }
+
+            if (parts.length > 1) {
+                String sub = parts[1].toLowerCase();
+                if (sub.equals("accept-uuid") || sub.equals("deny-uuid")) {
+                    // Check if the sender of the duel request is in FFA
+                    if (parts.length > 2) {
+                        try {
+                            java.util.UUID senderUuid = java.util.UUID.fromString(parts[2]);
+                            Player sender = org.bukkit.Bukkit.getPlayer(senderUuid);
+                            if (sender != null && FfaSessionService.getInstance().getSession(sender) != null) {
+                                event.setCancelled(true);
+                                dev.yowsef.neptuneffa.util.FormatUtil.sendMessage(player, MessagesConfig.FFA_TARGET_IN_FFA);
+                                return;
+                            }
+                        } catch (IllegalArgumentException ignored) {}
+                    }
+                } else if (sub.equals("specific")) {
+                    // Format: /duel specific <player> <kit> <rounds>
+                    if (parts.length > 2) {
+                        Player target = org.bukkit.Bukkit.getPlayer(parts[2]);
+                        if (target != null && FfaSessionService.getInstance().getSession(target) != null) {
+                            event.setCancelled(true);
+                            dev.yowsef.neptuneffa.util.FormatUtil.sendMessage(player, MessagesConfig.FFA_TARGET_IN_FFA);
+                            return;
+                        }
+                    }
+                } else {
+                    // Format: /duel <player>
+                    Player target = org.bukkit.Bukkit.getPlayer(parts[1]);
+                    if (target != null && FfaSessionService.getInstance().getSession(target) != null) {
+                        event.setCancelled(true);
+                        dev.yowsef.neptuneffa.util.FormatUtil.sendMessage(player, MessagesConfig.FFA_TARGET_IN_FFA);
+                        return;
+                    }
+                }
+            }
         }
     }
 }
