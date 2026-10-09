@@ -1,17 +1,21 @@
 name: NeptuneFFA
 main: dev.yowsef.neptuneffa.NeptuneFFA
 author: yowsef
-version: 1.3
+version: 1.4
 api-version: '1.21'
 depend: [Neptune]
+softdepend: [PlaceholderAPI, FastAsyncWorldEdit]
 commands:
   ffa:
-    usage: /ffa [leave|join <kit>|list|stats]
+    usage: /ffa [leave|join <kit>|list|stats [player]]
   ffaadmin:
-    usage: /ffaadmin [reload|open|close|reset|kick|setarena|addspawn|clearspawns]
+    usage: /ffaadmin [menu|reload|reset <kit>|addspawn <kit>|captureschematic <kit>]
     permission: neptuneffa.admin
 
 permissions:
   neptuneffa.admin:
     description: Grants admin access to NeptuneFFA
+    default: op
+  neptuneffa.stats.others:
+    description: Lets you see other players FFA stats with /ffa stats <player>
     default: op

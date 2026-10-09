@@ -50,12 +50,27 @@ public abstract class Menu implements InventoryHolder {
 
         buttons.clear();
         buttons.putAll(getButtons(player));
+
+        // clear slots that dont have a button anymore (closed session dropping out of the list
+        // left its old icon behind)
+        for (int slot = 0; slot < size; slot++) {
+            if (!buttons.containsKey(slot)) inventory.setItem(slot, null);
+        }
         
         buttons.forEach((slot, button) -> {
             if (slot < size) {
                 inventory.setItem(slot, button.getItemStack(player));
             }
         });
+    }
+
+    // close every open plugin menu, used on reload so nobody keeps editing old settings objects
+    public static void closeAll() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (player.getOpenInventory().getTopInventory().getHolder() instanceof Menu) {
+                player.closeInventory();
+            }
+        }
     }
 
     public Button getButton(int slot) {

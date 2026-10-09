@@ -6,11 +6,16 @@ import org.bukkit.Bukkit;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -64,9 +69,20 @@ public class FfaStatsManager {
         writeSnapshot(new HashMap<>(cache));
     }
 
-    private void writeSnapshot(Map<UUID, Map<String, PlayerStats>> snapshot) {
+    // synchronized: the 5 min async save and the sync save on shutdown could write the file at the same time
+    private synchronized void writeSnapshot(Map<UUID, Map<String, PlayerStats>> snapshot) {
         // Fresh YamlConfiguration
-        YamlConfiguration saveConfig = YamlConfiguration.loadConfiguration(file);
+        YamlConfiguration saveConfig = new YamlConfiguration();
+        if (file.exists()) {
+            try {
+                saveConfig.load(file);
+            } catch (IOException | InvalidConfigurationException e) {
+                // loadConfiguration() would hand back an empty config here and the save below
+                // would then wipe everyone who isnt cached. dont touch the file in that case
+                NeptuneFFA.getInstance().getLogger().severe("Could not read stats.yml, skipping save so it doesnt get wiped: " + e.getMessage());
+                return;
+            }
+        }
         for (Map.Entry<UUID, Map<String, PlayerStats>> playerEntry : snapshot.entrySet()) {
             for (Map.Entry<String, PlayerStats> kitEntry : playerEntry.getValue().entrySet()) {
                 String path = playerEntry.getKey().toString() + "." + kitEntry.getKey();
@@ -77,11 +93,49 @@ public class FfaStatsManager {
                 saveConfig.set(path + ".sessions", stats.getSessions());
             }
         }
+        // write to a temp file first and swap it in, a crash mid write left a half written stats.yml
+        File tmp = new File(file.getParentFile(), file.getName() + ".tmp");
         try {
-            saveConfig.save(file);
+            saveConfig.save(tmp);
+            try {
+                Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Every stored kill count, newest value wins (cache over the file loaded at startup).
+     * Used to fill the leaderboards on startup, they used to be empty until someone got a kill.
+     */
+    public void forEachKills(KillsConsumer consumer) {
+        Map<UUID, Map<String, Integer>> all = new HashMap<>();
+        for (String uuidKey : config.getKeys(false)) {
+            UUID uuid;
+            try {
+                uuid = UUID.fromString(uuidKey);
+            } catch (IllegalArgumentException e) {
+                continue;
+            }
+            ConfigurationSection section = config.getConfigurationSection(uuidKey);
+            if (section == null) continue;
+            for (String kitName : section.getKeys(false)) {
+                all.computeIfAbsent(uuid, k -> new HashMap<>()).put(kitName, section.getInt(kitName + ".kills", 0));
+            }
+        }
+        for (Map.Entry<UUID, Map<String, PlayerStats>> entry : cache.entrySet()) {
+            for (Map.Entry<String, PlayerStats> kitEntry : entry.getValue().entrySet()) {
+                all.computeIfAbsent(entry.getKey(), k -> new HashMap<>()).put(kitEntry.getKey(), kitEntry.getValue().getKills());
+            }
+        }
+        all.forEach((uuid, kits) -> kits.forEach((kitName, kills) -> consumer.accept(uuid, kitName, kills)));
+    }
+
+    public interface KillsConsumer {
+        void accept(UUID uuid, String kitName, int kills);
     }
 
     @Data

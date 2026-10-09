@@ -38,10 +38,18 @@ public class ArenaPickerMenu extends PaginatedMenu {
         int index = 0;
         for (IArena arena : arenas) {
             boolean isSelected = settings.getArenaName().equalsIgnoreCase(arena.getName());
+            // two kits on one arena means one kits reset pastes over the other kits players
+            String usedBy = isSelected ? null : findKitUsing(arena);
 
             buttons.put(index++, new Button(0) {
                 @Override
                 public ItemStack getItemStack(Player p) {
+                    if (usedBy != null) {
+                        return new ItemBuilder(Material.BARRIER)
+                                .name("&c" + arena.getDisplayName())
+                                .lore("&7Already used by FFA kit &c" + usedBy)
+                                .build();
+                    }
                     return new ItemBuilder(isSelected ? Material.MAP : Material.PAPER)
                             .name((isSelected ? "&a" : "&e") + arena.getDisplayName())
                             .lore(isSelected ? "&7Currently selected" : "&7Click to select")
@@ -50,6 +58,7 @@ public class ArenaPickerMenu extends PaginatedMenu {
 
                 @Override
                 public void onClick(Player p, ClickType clickType) {
+                    if (usedBy != null) return;
                     settings.setArenaName(arena.getName());
                     FfaConfig.get().saveKits();
                     FfaSessionService.getInstance().rebuild(kit);
@@ -59,6 +68,16 @@ public class ArenaPickerMenu extends PaginatedMenu {
         }
 
         return buttons;
+    }
+
+    private String findKitUsing(IArena arena) {
+        for (KitFfaSettings other : FfaConfig.get().getKitSettings().values()) {
+            if (other.getKitName().equalsIgnoreCase(kit.getName())) continue;
+            if (other.getArenaName().equalsIgnoreCase(arena.getName())) {
+                return other.getKitName();
+            }
+        }
+        return null;
     }
 
     @Override

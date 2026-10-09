@@ -1,5 +1,6 @@
 package dev.yowsef.neptuneffa.menu.admin;
 
+import dev.yowsef.neptuneffa.config.MessagesConfig;
 import dev.yowsef.neptuneffa.session.FfaSession;
 import dev.yowsef.neptuneffa.session.FfaSessionService;
 import dev.yowsef.neptuneffa.util.FormatUtil;
@@ -53,7 +54,7 @@ public class SessionOverviewMenu extends PaginatedMenu {
                 public void onClick(Player p, ClickType clickType) {
                     if (clickType.isRightClick()) {
                         session.getResetTask().setSecondsRemaining(0);
-                        dev.yowsef.neptuneffa.util.FormatUtil.sendMessage(p, "&aForced immediate reset for " + session.getKit().getName());
+                        FormatUtil.sendMessage(p, MessagesConfig.ADMIN_RESET_FORCED.replace("{kit}", session.getKit().getName()));
                         p.closeInventory();
                     }
                 }

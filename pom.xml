@@ -6,7 +6,7 @@
 
     <groupId>dev.neptuneffa</groupId>
     <artifactId>NeptuneFFA</artifactId>
-    <version>1.3</version>
+    <version>1.4</version>
     <packaging>jar</packaging>
 
     <name>NeptuneFFA</name>
@@ -59,10 +59,11 @@
             <version>2.5</version>
             <scope>provided</scope>
         </dependency>
+        <!-- built against 1.21.11 (java 21) so the same jar runs on 1.21.11 and 26.x -->
         <dependency>
-            <groupId>org.spigotmc</groupId>
-            <artifactId>spigot-api</artifactId>
-            <version>1.21-R0.1-SNAPSHOT</version>
+            <groupId>io.papermc.paper</groupId>
+            <artifactId>paper-api</artifactId>
+            <version>1.21.11-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

@@ -39,7 +39,7 @@ public class NeptuneFFA extends JavaPlugin {
 
         // Initialize services
         // Load rankings class
-        FfaRankingService.getInstance();
+        FfaRankingService.getInstance().loadAll();
         new FfaSessionService();
 
         // Periodically save stats

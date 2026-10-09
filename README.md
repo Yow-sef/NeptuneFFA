@@ -24,8 +24,8 @@ NeptuneFFA allows server administrators to define FFA arenas per kit, manage liv
 
 ## 🛠️ Prerequisites
 Before installing NeptuneFFA, make sure your server meets the following requirements:
-* **Minecraft Version**: Spigot or Paper 1.21+
-* **Java Version**: Java 21 or higher
+* **Minecraft Version**: Paper 1.21.11 or 26.2 (same jar works on both)
+* **Java Version**: Java 21 or higher (26.x servers need Java 25 anyway)
 * **Required Dependency**: [Neptune Core] (must be installed and enabled on the server)
 
 ---
@@ -127,6 +127,7 @@ ffa-no-session:  "&cNo FFA session is open for that kit."
 ffa-not-in-ffa:  "&cYou are not in an FFA session."
 ffa-already-in:  "&cYou are already in an FFA session."
 ```
+Thats just the main ones, every chat message the plugin sends is in this file (combat tag, /ffa, /ffaadmin, admin menus) and so is the text on the /ffa kit items. Placeholders like `{kit}` `{player}` work where the default text uses them. New keys get added to your file automatically on update.
 
 ---
 

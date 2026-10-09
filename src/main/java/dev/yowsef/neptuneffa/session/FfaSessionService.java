@@ -9,14 +9,15 @@ import lombok.Getter;
 import org.bukkit.entity.Player;
 
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class FfaSessionService {
     @Getter private static FfaSessionService instance;
-    private final Map<String, FfaSession> sessions = new HashMap<>();
+    // kit names are matched ignoring case (/ffa join nodebuff, kits.yml keys typed differently etc)
+    private final Map<String, FfaSession> sessions = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     private final Map<UUID, FfaSession> activePlayers = new ConcurrentHashMap<>();
 
     public FfaSessionService() {
@@ -25,7 +26,12 @@ public class FfaSessionService {
     }
 
     public void rebuildAll() {
-        sessions.values().forEach(s -> s.close(""));
+        // destroy too, not just close. a reset that is mid restore still holds the old session
+        // and would reopen it later as a ghost session that keeps resetting the arena
+        sessions.values().forEach(s -> {
+            s.close("");
+            s.destroy();
+        });
         sessions.clear();
         activePlayers.clear();
 
@@ -81,7 +87,10 @@ public class FfaSessionService {
 
     // Shut down all sessions
     public void shutdownAll() {
-        sessions.values().forEach(s -> s.close(""));
+        sessions.values().forEach(s -> {
+            s.close("");
+            s.destroy();
+        });
         sessions.clear();
         activePlayers.clear();
     }

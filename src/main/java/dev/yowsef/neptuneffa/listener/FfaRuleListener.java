@@ -4,15 +4,20 @@ import dev.lrxh.api.arena.IArena;
 import dev.lrxh.api.kit.IKit;
 import dev.yowsef.neptuneffa.API;
 import dev.yowsef.neptuneffa.NeptuneFFA;
+import dev.yowsef.neptuneffa.config.MessagesConfig;
 import dev.yowsef.neptuneffa.session.FfaParticipant;
 import dev.yowsef.neptuneffa.session.FfaSession;
 import dev.yowsef.neptuneffa.session.FfaSessionService;
 import dev.yowsef.neptuneffa.session.SpawnPointService;
+import dev.yowsef.neptuneffa.util.FormatUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.entity.Arrow;
+import org.bukkit.entity.AreaEffectCloud;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -23,6 +28,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason;
 import org.bukkit.event.player.*;
+import org.bukkit.inventory.ItemStack;
 
 public class FfaRuleListener implements Listener {
 
@@ -48,7 +54,11 @@ public class FfaRuleListener implements Listener {
         }
     }
 
-    // Override cancellation for damage
+    // Override cancellation for damage.
+    // Everything damage related lives in this one handler. It used to be split between an
+    // EntityDamageEvent and an EntityDamageByEntityEvent handler on the same priority, but bukkit
+    // doesnt promise which of those runs first so they kept undoing each other (un-cancelling a hit
+    // that was already handled as a death, attacker recorded after the death etc).
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onEntityDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
@@ -57,12 +67,24 @@ public class FfaRuleListener implements Listener {
         IKit kit = session.getKit();
 
         FfaParticipant p = session.getParticipant(player.getUniqueId());
-        if (p != null && (p.isInRespawnCountdown() || p.isSpawnProtected())) {
+        if (p == null || p.isInRespawnCountdown() || p.isSpawnProtected()) {
             event.setCancelled(true);
             return;
         }
 
         event.setCancelled(false);
+
+        Player attacker = event instanceof EntityDamageByEntityEvent byEntity ? getAttacker(byEntity.getDamager()) : null;
+        // hurting yourself (own arrow, own tnt) should never count as a kill
+        if (attacker != null && attacker.getUniqueId().equals(player.getUniqueId())) attacker = null;
+
+        if (attacker != null) {
+            FfaParticipant attackerP = session.getParticipant(attacker.getUniqueId());
+            if (attackerP != null && attackerP.isSpawnProtected()) {
+                attackerP.clearSpawnProtection(); // Lose protection when you attack
+            }
+            p.setLastAttacker(attacker.getUniqueId());
+        }
 
         if (event.getCause() == EntityDamageEvent.DamageCause.FALL && !API.kitIs(kit, "fallDamage")) {
             event.setCancelled(true);
@@ -74,65 +96,33 @@ public class FfaRuleListener implements Listener {
             return;
         }
 
+        // Only apply multiplier for PvP hits. Has to happen before the lethal check,
+        // otherwise a hit that only becomes lethal after scaling kills the player for real
+        if (event instanceof EntityDamageByEntityEvent) {
+            event.setDamage(event.getDamage() * kit.getDamageMultiplier());
+        }
+
         if (event.getFinalDamage() >= player.getHealth()) {
             if (player.getInventory().getItemInMainHand().getType() == Material.TOTEM_OF_UNDYING ||
                 player.getInventory().getItemInOffHand().getType() == Material.TOTEM_OF_UNDYING) {
                 return;
             }
             event.setCancelled(true);
-            player.setHealth(20.0f);
-            Player killer = null;
-            if (p != null && p.getValidAttacker() != null) {
-                killer = Bukkit.getPlayer(p.getValidAttacker());
-            }
-            session.onDeath(player, killer);
-            return;
-        }
-
-        // Only apply multiplier for PvP hits
-        if (event instanceof EntityDamageByEntityEvent) {
-            event.setDamage(event.getDamage() * kit.getDamageMultiplier());
+            session.onDeath(player, getKiller(p));
         }
     }
 
-    // Override cancellation
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
-    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        if (!(event.getEntity() instanceof Player victim)) return;
-        FfaSession session = getSession(victim);
-        if (session == null) return;
+    private Player getKiller(FfaParticipant p) {
+        if (p == null || p.getValidAttacker() == null) return null;
+        return Bukkit.getPlayer(p.getValidAttacker());
+    }
 
-        event.setCancelled(false);
-
-        FfaParticipant victimP = session.getParticipant(victim.getUniqueId());
-        if (victimP != null && victimP.isInRespawnCountdown()) {
-            event.setCancelled(true);
-            return;
-        }
-
-        // Cancel damage if victim has active spawn protection
-        if (victimP != null && victimP.isSpawnProtected()) {
-            event.setCancelled(true);
-            return;
-        }
-
-        // If the attacker has spawn protection and is attacking, remove their protection
-        Player attacker = null;
-        if (event.getDamager() instanceof Player) {
-            attacker = (Player) event.getDamager();
-        } else if (event.getDamager() instanceof Arrow arrow && arrow.getShooter() instanceof Player) {
-            attacker = (Player) arrow.getShooter();
-        }
-
-        if (attacker != null) {
-            FfaParticipant attackerP = session.getParticipant(attacker.getUniqueId());
-            if (attackerP != null && attackerP.isSpawnProtected()) {
-                attackerP.clearSpawnProtection(); // Lose protection when you attack
-            }
-            if (victimP != null) {
-                victimP.setLastAttacker(attacker.getUniqueId());
-            }
-        }
+    private Player getAttacker(Entity damager) {
+        if (damager instanceof Player player) return player;
+        if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Player shooter) return shooter;
+        if (damager instanceof TNTPrimed tnt && tnt.getSource() instanceof Player source) return source;
+        if (damager instanceof AreaEffectCloud cloud && cloud.getSource() instanceof Player source) return source;
+        return null;
     }
 
     @EventHandler
@@ -176,9 +166,17 @@ public class FfaRuleListener implements Listener {
         // Auto-ignite TNT
         if (event.getBlock().getType() == Material.TNT && API.kitIs(session.getKit(), "autoIgnite")) {
             event.setCancelled(true);
+            // cancelling the place gives the item back, so take one tnt ourselves (same as neptune does in matches)
+            if (player.getGameMode() != GameMode.CREATIVE) {
+                ItemStack hand = player.getInventory().getItem(event.getHand());
+                if (hand.getType() == Material.TNT) {
+                    hand.setAmount(hand.getAmount() - 1);
+                }
+            }
             TNTPrimed tnt = event.getBlock().getWorld().spawn(
                     event.getBlock().getLocation().add(0.5, 0.5, 0.5), TNTPrimed.class);
             tnt.setFuseTicks(40);
+            tnt.setSource(player);
             return;
         }
 
@@ -257,13 +255,15 @@ public class FfaRuleListener implements Listener {
         if (arena == null) return;
 
         if (player.getLocation().getY() <= arena.getDeathY()) {
-            session.onDeath(player, null);
+            // knocked into the void still counts for whoever hit you last
+            session.onDeath(player, getKiller(participant));
             return;
         }
 
         if (!isInsideBounds(player.getLocation(), arena)) {
             // Teleport to spawn
-            player.teleport(SpawnPointService.get().getSpawn(session.getSettings(), session.getCachedRandomSpawns()));
+            Location spawn = SpawnPointService.get().getSpawn(session.getSettings(), session.getCachedRandomSpawns());
+            if (spawn != null) player.teleport(spawn);
         }
     }
 
@@ -303,12 +303,32 @@ public class FfaRuleListener implements Listener {
 
 
 
-    @EventHandler
+    // Fallback for deaths that skip the damage handler (/kill, plugins setting health to 0 etc).
+    // Without this the player really dies, loses the kit and is stuck as a participant.
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onDeath(PlayerDeathEvent event) {
-        if (isInFfa(event.getEntity())) {
-            event.setDeathMessage(null);
-            event.getDrops().clear();
-        }
+        Player player = event.getEntity();
+        FfaSession session = getSession(player);
+        if (session == null) return;
+
+        event.setDeathMessage(null);
+        event.getDrops().clear();
+        event.setDroppedExp(0);
+
+        FfaParticipant p = session.getParticipant(player.getUniqueId());
+        if (p == null) return;
+
+        event.setCancelled(true);
+        event.setReviveHealth(FfaSession.getMaxHealth(player));
+        if (p.isInRespawnCountdown()) return;
+
+        // run the normal ffa death once the revive went through (cant teleport a dying player)
+        Player killer = getKiller(p);
+        Bukkit.getScheduler().runTask(NeptuneFFA.getInstance(), () -> {
+            if (player.isOnline() && session.getParticipant(player.getUniqueId()) == p) {
+                session.onDeath(player, killer);
+            }
+        });
     }
 
     @EventHandler
@@ -333,33 +353,25 @@ public class FfaRuleListener implements Listener {
         if (!isInFfa(player)) return;
 
         String cmd = event.getMessage().toLowerCase().trim();
-
-        // Handle /leave or /spawn commands to cleanly leave FFA
-        if (cmd.startsWith("/leave") || cmd.startsWith("/spawn")) {
-            FfaSession session = getSession(player);
-            if (session != null) {
-                FfaParticipant p = session.getParticipant(player.getUniqueId());
-                if (p != null && p.isCombatTagged() && !player.hasPermission("neptuneffa.admin")) {
-                    event.setCancelled(true);
-                    dev.yowsef.neptuneffa.util.FormatUtil.sendMessage(player, "&cYou cannot use commands while in combat!");
-                    return;
-                }
-                event.setCancelled(true);
-                session.removePlayer(player.getUniqueId(), "&cYou left FFA.", true);
-                return;
-            }
-        }
-
-        // Allow /ffa leave
-        if (cmd.startsWith("/ffa leave") || cmd.equals("/ffa")) return;
+        // only look at the label, startsWith("/spawn") also caught /spawner, /leaveparty etc
+        String label = cmd.split("\\s+")[0];
 
         FfaSession session = getSession(player);
         if (session == null) return;
 
+        // Combat tag check first. /ffa leave (and the /ffa menu) used to be whitelisted before
+        // this check, so you could just leave mid fight with no death
         FfaParticipant p = session.getParticipant(player.getUniqueId());
         if (p != null && p.isCombatTagged() && !player.hasPermission("neptuneffa.admin")) {
             event.setCancelled(true);
-            dev.yowsef.neptuneffa.util.FormatUtil.sendMessage(player, "&cYou cannot use commands while in combat!");
+            FormatUtil.sendMessage(player, MessagesConfig.COMBAT_NO_COMMANDS);
+            return;
+        }
+
+        // Handle /leave or /spawn commands to cleanly leave FFA
+        if (label.equals("/leave") || label.equals("/spawn")) {
+            event.setCancelled(true);
+            session.removePlayer(player.getUniqueId(), MessagesConfig.FFA_LEFT, true);
         }
     }
 

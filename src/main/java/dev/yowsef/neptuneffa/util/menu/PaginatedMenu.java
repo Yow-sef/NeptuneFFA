@@ -39,24 +39,25 @@ public abstract class PaginatedMenu extends Menu {
         Map<Integer, Button> buttons = new HashMap<>();
         Map<Integer, Button> allButtons = getAllPagesButtons(player);
 
-        int contentSlots = getContentSlots();
+        int contentSlots = Math.max(1, getContentSlots());
 
-        // Calculate total pages from all buttons
-        int maxPages = allButtons.isEmpty() ? 1
-                : (int) Math.ceil((double) allButtons.size() / contentSlots);
+        // Calculate total pages from the highest used index, not the button count. a kit with
+        // gui-slot 20 in a 27 slot menu sits on page 2, counting buttons said 1 page so it never showed
+        int maxIndex = allButtons.keySet().stream().mapToInt(Integer::intValue).max().orElse(0);
+        int maxPages = allButtons.isEmpty() ? 1 : maxIndex / contentSlots + 1;
 
         // Clamp current page
         if (page > maxPages) page = maxPages;
         if (page < 1) page = 1;
 
-        int minIndex = (page - 1) * contentSlots;
-        int maxIndex = page * contentSlots;
+        int pageStart = (page - 1) * contentSlots;
+        int pageEnd = page * contentSlots;
 
         // Slice the correct page range from all buttons
         for (Map.Entry<Integer, Button> entry : allButtons.entrySet()) {
             int index = entry.getKey();
-            if (index >= minIndex && index < maxIndex) {
-                int slot = index - minIndex;
+            if (index >= pageStart && index < pageEnd) {
+                int slot = index - pageStart;
                 Button button = entry.getValue();
                 button.setSlot(slot);
                 buttons.put(slot, button);

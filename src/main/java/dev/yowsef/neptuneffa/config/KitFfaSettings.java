@@ -5,6 +5,7 @@ import dev.yowsef.neptuneffa.API;
 import lombok.Data;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,22 +49,32 @@ public class KitFfaSettings {
         if (cachedSpawnPoints != null) return cachedSpawnPoints;
         List<Location> locations = new ArrayList<>();
         for (String raw : spawnPointsRaw) {
-            String[] parts = raw.split(",");
-            if (parts.length >= 6) {
-                try {
-                    locations.add(new Location(
-                            Bukkit.getWorld(parts[0]),
-                            Double.parseDouble(parts[1]),
-                            Double.parseDouble(parts[2]),
-                            Double.parseDouble(parts[3]),
-                            Float.parseFloat(parts[4]),
-                            Float.parseFloat(parts[5])
-                    ));
-                } catch (NumberFormatException ignored) {}
-            }
+            Location loc = parseLocation(raw);
+            if (loc != null) locations.add(loc);
         }
         cachedSpawnPoints = locations;
         return locations;
+    }
+
+    // null if malformed or the world isnt loaded (a null world location blew up the join + spawn menu)
+    public static Location parseLocation(String raw) {
+        if (raw == null) return null;
+        String[] parts = raw.split(",");
+        if (parts.length < 6) return null;
+        World world = Bukkit.getWorld(parts[0]);
+        if (world == null) return null;
+        try {
+            return new Location(
+                    world,
+                    Double.parseDouble(parts[1]),
+                    Double.parseDouble(parts[2]),
+                    Double.parseDouble(parts[3]),
+                    Float.parseFloat(parts[4]),
+                    Float.parseFloat(parts[5])
+            );
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     public void invalidateSpawnCache() {

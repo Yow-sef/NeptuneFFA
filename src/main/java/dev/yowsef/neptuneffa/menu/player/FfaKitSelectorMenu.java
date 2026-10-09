@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,18 +41,20 @@ public class FfaKitSelectorMenu extends PaginatedMenu {
                 .toList();
 
         // 1. Place kits with specific slots configured
-        Map<IKit, Integer> autoKits = new HashMap<>();
+        // (list keeps neptunes kit order, the old HashMap shuffled auto placed kits around)
+        List<IKit> autoKits = new ArrayList<>();
         for (IKit kit : kits) {
             KitFfaSettings settings = FfaConfig.get().getKitSettings(kit);
-            if (settings != null && settings.getGuiSlot() >= 0) {
+            // two kits on the same gui-slot used to overwrite each other, the 2nd one just gets auto placed now
+            if (settings != null && settings.getGuiSlot() >= 0 && !buttons.containsKey(settings.getGuiSlot())) {
                 buttons.put(settings.getGuiSlot(), new FfaKitButton(settings.getGuiSlot(), kit));
             } else {
-                autoKits.put(kit, -1);
+                autoKits.add(kit);
             }
         }
 
         // 2. Place auto-allocated kits (guiSlot == -1) in first available empty slots
-        for (IKit kit : autoKits.keySet()) {
+        for (IKit kit : autoKits) {
             int emptySlot = -1;
             for (int i = 0; ; i++) {
                 if (!buttons.containsKey(i)) {

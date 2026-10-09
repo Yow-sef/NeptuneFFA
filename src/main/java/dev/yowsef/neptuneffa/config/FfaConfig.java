@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,7 +22,7 @@ public class FfaConfig {
     // Singleton
     private static final FfaConfig INSTANCE = new FfaConfig();
 
-    private final Map<String, KitFfaSettings> kitSettings = new HashMap<>();
+    private final Map<String, KitFfaSettings> kitSettings = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     private int globalRespawnDelay;
     private boolean trackNeptuneKitStats;
     private int combatTagDurationSeconds;
@@ -103,8 +103,8 @@ public class FfaConfig {
 
         this.menuTitle = config.getString("ffa.menu.title", "Free For All");
         int rawSize = config.getInt("ffa.menu.size", 54);
-        // to nearest valid chest size
-        int[] validSizes = {9, 18, 27, 36, 45, 54};
+        // to nearest valid chest size. no 9, the last row is the page arrows so a 9 slot menu has no room for kits
+        int[] validSizes = {18, 27, 36, 45, 54};
         this.menuSize = 54;
         for (int valid : validSizes) {
             if (rawSize <= valid) { this.menuSize = valid; break; }
@@ -120,6 +120,11 @@ public class FfaConfig {
         // Cache lobby item values
         this.lobbyItemEnabled = config.getBoolean("ffa.lobby-item.enabled", true);
         this.lobbyItemSlot = config.getInt("ffa.lobby-item.slot", 8);
+        if (lobbyItemSlot < 0 || lobbyItemSlot > 35) {
+            // anything else threw every 10 ticks from the lobby item task
+            NeptuneFFA.getInstance().getLogger().warning("ffa.lobby-item.slot must be 0-35, using 8");
+            this.lobbyItemSlot = 8;
+        }
         try {
             this.lobbyItemMaterial = Material.valueOf(config.getString("ffa.lobby-item.material", "DIAMOND_SWORD"));
         } catch (IllegalArgumentException e) {

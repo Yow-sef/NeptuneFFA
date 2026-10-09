@@ -48,8 +48,10 @@ public class SpawnPointService {
             return cachedRandomSpawns.get(random.nextInt(cachedRandomSpawns.size()));
         }
 
-        // Fallback to live scan
-        return randomInBounds(arena);
+        // Fallback to live scan, then the old fallback spot
+        Location scanned = randomInBounds(arena);
+        if (scanned != null) return scanned;
+        return arena.getMin() != null && arena.getMin().getWorld() != null ? arena.getMin().clone().add(0, 2, 0) : null;
     }
 
     /**
@@ -79,17 +81,24 @@ public class SpawnPointService {
         if (arena == null) return null;
         Location min = arena.getMin();
         Location max = arena.getMax();
+        if (min == null || max == null || min.getWorld() == null) return null;
 
-        double x = min.getX() + (max.getX() - min.getX()) * random.nextDouble();
-        double z = min.getZ() + (max.getZ() - min.getZ()) * random.nextDouble();
+        // pick a block inside the bounds. the old version added 0.5 to a random double, which could
+        // land half a block outside the arena and onMove would teleport the player again and again
+        int minX = Math.min(min.getBlockX(), max.getBlockX()), maxX = Math.max(min.getBlockX(), max.getBlockX());
+        int minY = Math.min(min.getBlockY(), max.getBlockY()), maxY = Math.max(min.getBlockY(), max.getBlockY());
+        int minZ = Math.min(min.getBlockZ(), max.getBlockZ()), maxZ = Math.max(min.getBlockZ(), max.getBlockZ());
+        int x = minX + random.nextInt(maxX - minX + 1);
+        int z = minZ + random.nextInt(maxZ - minZ + 1);
 
-        for (double y = max.getY(); y >= min.getY(); y--) {
+        // stand on y+1, so start low enough that the player is still inside the bounds
+        for (int y = maxY - 1; y >= minY; y--) {
             Location loc = new Location(min.getWorld(), x, y, z);
             if (isSafe(loc)) {
                 return loc.add(0.5, 1, 0.5);
             }
         }
-        return min.clone().add(0, 2, 0); // Fallback
+        return null;
     }
 
     private boolean isSafe(Location loc) {

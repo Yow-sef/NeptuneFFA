@@ -16,7 +16,11 @@ import dev.yowsef.neptuneffa.scoreboard.FfaRankingService;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Player;
+import dev.yowsef.neptuneffa.util.FfaArenaRestorer;
 import dev.yowsef.neptuneffa.util.FormatUtil;
 
 import javax.annotation.Nullable;
@@ -77,6 +81,20 @@ public class FfaSession {
         resetTask.runTaskTimer(NeptuneFFA.getInstance(), 0L, 20L);
     }
 
+    // With no schematic (FAWE missing) and worldgen off nothing resets the arena, so blocks players
+    // placed used to stay forever and after the reset nobody could break them anymore
+    private void clearPlacedBlocks() {
+        IArena arena = settings.resolveArena();
+        boolean restoredElsewhere = settings.isWorldgen() || (arena != null
+                && FfaArenaRestorer.isFaweAvailable() && FfaArenaRestorer.getSchematicFile(arena.getName()).exists());
+        if (!restoredElsewhere) {
+            for (Location loc : placedBlocks) {
+                if (loc.getWorld() != null) loc.getBlock().setType(Material.AIR, false);
+            }
+        }
+        placedBlocks.clear();
+    }
+
     // Mark session as destroyed
     public void destroy() {
         this.destroyed = true;
@@ -91,7 +109,7 @@ public class FfaSession {
         }
         participants.clear();
         participantMap.clear();
-        placedBlocks.clear();
+        clearPlacedBlocks();
 
         IArena baseArena = settings.resolveArena();
         if (baseArena != null) {
@@ -109,13 +127,13 @@ public class FfaSession {
         // Ensure arena is fully configured
         IArena arena = getArena();
         if (arena == null || !arena.isSetup() || !arena.isEnabled()) {
-            FormatUtil.sendMessage(player, "&cThis FFA arena is not configured. Contact an admin.");
+            FormatUtil.sendMessage(player, MessagesConfig.FFA_ARENA_NOT_CONFIGURED);
             return;
         }
 
         Location spawn = SpawnPointService.get().getSpawn(settings, cachedRandomSpawns);
         if (spawn == null) {
-            FormatUtil.sendMessage(player, "&cThis FFA arena has no valid spawn configured. Contact an admin.");
+            FormatUtil.sendMessage(player, MessagesConfig.FFA_ARENA_NO_SPAWN);
             return;
         }
 
@@ -130,13 +148,13 @@ public class FfaSession {
         FfaSessionService.getInstance().addActivePlayer(player.getUniqueId(), this);
 
         player.teleport(spawn);
-        kit.giveLoadout(player.getUniqueId());
+        getKit().giveLoadout(player.getUniqueId());
         API.applyShieldPatterns(profile, player);
 
         FfaStatsManager.PlayerStats stats = FfaStatsManager.get().getStats(player.getUniqueId(), kit.getName());
         stats.setSessions(stats.getSessions() + 1);
 
-        if (API.kitIs(kit, "showHP")) {
+        if (API.kitIs(getKit(), "showHP")) {
             showHealth(player);
         }
 
@@ -196,62 +214,27 @@ public class FfaSession {
     public void onDeath(Player victim, @Nullable Player killer) {
         FfaParticipant victimP = getParticipant(victim.getUniqueId());
         if (victimP == null || victimP.isInRespawnCountdown()) return;
+        // Mark straight away. The respawn task only sets this on its first tick, so a second
+        // lethal hit / void move in the same tick used to count the death twice
+        victimP.setInRespawnCountdown(true);
+        if (!victim.isDead()) victim.setHealth(getMaxHealth(victim));
+        victim.setFireTicks(0);
 
-        victimP.recordDeath();
-        incrementPersistent(victim.getUniqueId(), "ffa_deaths_" + kit.getName(), 1);
+        if (killer != null && killer.getUniqueId().equals(victim.getUniqueId())) killer = null;
+        recordDeath(victimP, killer);
 
-        // Record death in stats
-        FfaStatsManager.PlayerStats victimStats = FfaStatsManager.get().getStats(victim.getUniqueId(), kit.getName());
-        victimStats.setDeaths(victimStats.getDeaths() + 1);
+        if (killer != null && getParticipant(killer.getUniqueId()) != null) {
+            // Rekit on kill full kit with durability
+            if (settings.isRekitOnKill()) {
+                getKit().giveLoadout(killer.getUniqueId());
+                API.applyShieldPatterns(API.getProfile(killer.getUniqueId()), killer);
+            }
 
-        if (FfaConfig.get().isTrackNeptuneKitStats()) {
-            IKitData kd = API.getKitData(victim.getUniqueId(), kit);
-            if (kd != null) kd.setDeaths(kd.getDeaths() + 1);
-        }
-
-        if (killer != null) {
-            FfaParticipant killerP = getParticipant(killer.getUniqueId());
-            if (killerP != null) {
-                killerP.recordKill();
-                incrementPersistent(killer.getUniqueId(), "ffa_kills_" + kit.getName(), 1);
-
-                // Record kill and streak in stats
-                FfaStatsManager.PlayerStats killerStats = FfaStatsManager.get().getStats(killer.getUniqueId(), kit.getName());
-                killerStats.setKills(killerStats.getKills() + 1);
-                if (killerP.getSessionStreak() > killerStats.getBestStreak()) {
-                    killerStats.setBestStreak(killerP.getSessionStreak());
-                }
-
-                int lifeBS = getPersistent(killer.getUniqueId(), "ffa_best_streak_" + kit.getName());
-                if (killerP.getSessionStreak() > lifeBS) {
-                    setPersistent(killer.getUniqueId(), "ffa_best_streak_" + kit.getName(), killerP.getSessionStreak());
-                }
-
-                if (FfaConfig.get().isTrackNeptuneKitStats()) {
-                    IKitData kd = API.getKitData(killer.getUniqueId(), kit);
-                    if (kd != null) kd.setKills(kd.getKills() + 1);
-                }
-
-                // Update rank leaderboards
-                FfaRankingService.getInstance().update(killer.getUniqueId(), kit.getName());
-
-                // Rekit on kill full kit with durability
-                if (settings.isRekitOnKill()) {
-                    kit.giveLoadout(killer.getUniqueId());
-                    API.applyShieldPatterns(API.getProfile(killer.getUniqueId()), killer);
-                }
-
-                // Heal on kill — restore HP and saturation as a kill reward if enabled
-                if (settings.isHealOnKill()) {
-                    org.bukkit.attribute.AttributeInstance maxHealthAttr = killer.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH);
-                    if (maxHealthAttr != null) {
-                        killer.setHealth(maxHealthAttr.getValue());
-                    } else {
-                        killer.setHealth(20.0);
-                    }
-                    killer.setFoodLevel(20);
-                    killer.setSaturation(20f);
-                }
+            // Heal on kill — restore HP and saturation as a kill reward if enabled
+            if (settings.isHealOnKill()) {
+                killer.setHealth(getMaxHealth(killer));
+                killer.setFoodLevel(20);
+                killer.setSaturation(20f);
             }
         }
 
@@ -265,12 +248,64 @@ public class FfaSession {
             int delay = settings.getRespawnDelayOverride() != -1
                     ? settings.getRespawnDelayOverride()
                     : FfaConfig.get().getGlobalRespawnDelay();
-            new FfaRespawnTask(this, victim, delay).runTaskTimer(NeptuneFFA.getInstance(), 0L, 20L);
+            new FfaRespawnTask(this, victim, victimP, delay).runTaskTimer(NeptuneFFA.getInstance(), 0L, 20L);
         } else {
             // Send to lobby immediately — player must manually rejoin
-            removePlayer(victim.getUniqueId(),
-                    "&cYou died. Use the FFA menu to rejoin.", true);
+            removePlayer(victim.getUniqueId(), MessagesConfig.FFA_DIED_LOBBY, true);
         }
+    }
+
+    /**
+     * Death/kill stats for one death. Also used when someone combat logs, so both paths
+     * update the same things (session, stats.yml, neptune persistent data, kit data, ranking).
+     */
+    public void recordDeath(FfaParticipant victimP, @Nullable Player killer) {
+        UUID victimId = victimP.getUuid();
+        String kitName = kit.getName();
+        IKit currentKit = getKit();
+
+        victimP.recordDeath();
+        incrementPersistent(victimId, "ffa_deaths_" + kitName, 1);
+
+        FfaStatsManager.PlayerStats victimStats = FfaStatsManager.get().getStats(victimId, kitName);
+        victimStats.setDeaths(victimStats.getDeaths() + 1);
+
+        if (FfaConfig.get().isTrackNeptuneKitStats()) {
+            IKitData kd = API.getKitData(victimId, currentKit);
+            if (kd != null) kd.setDeaths(kd.getDeaths() + 1);
+        }
+
+        if (killer == null || killer.getUniqueId().equals(victimId)) return;
+        FfaParticipant killerP = getParticipant(killer.getUniqueId());
+        if (killerP == null) return;
+
+        killerP.recordKill();
+        incrementPersistent(killer.getUniqueId(), "ffa_kills_" + kitName, 1);
+
+        // Record kill and streak in stats
+        FfaStatsManager.PlayerStats killerStats = FfaStatsManager.get().getStats(killer.getUniqueId(), kitName);
+        killerStats.setKills(killerStats.getKills() + 1);
+        if (killerP.getSessionStreak() > killerStats.getBestStreak()) {
+            killerStats.setBestStreak(killerP.getSessionStreak());
+        }
+
+        int lifeBS = getPersistent(killer.getUniqueId(), "ffa_best_streak_" + kitName);
+        if (killerP.getSessionStreak() > lifeBS) {
+            setPersistent(killer.getUniqueId(), "ffa_best_streak_" + kitName, killerP.getSessionStreak());
+        }
+
+        if (FfaConfig.get().isTrackNeptuneKitStats()) {
+            IKitData kd = API.getKitData(killer.getUniqueId(), currentKit);
+            if (kd != null) kd.setKills(kd.getKills() + 1);
+        }
+
+        // Update rank leaderboards
+        FfaRankingService.getInstance().update(killer.getUniqueId(), kitName);
+    }
+
+    public static double getMaxHealth(Player player) {
+        AttributeInstance maxHealthAttr = player.getAttribute(Attribute.MAX_HEALTH);
+        return maxHealthAttr != null ? maxHealthAttr.getValue() : 20.0;
     }
 
     public FfaParticipant getParticipant(UUID uuid) {

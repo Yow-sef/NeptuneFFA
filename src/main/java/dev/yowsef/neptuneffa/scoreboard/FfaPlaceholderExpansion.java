@@ -114,7 +114,8 @@ public class FfaPlaceholderExpansion extends PlaceholderExpansion {
                 return String.format("%.2f", (double) stats.getKills() / Math.max(1, stats.getDeaths()));
             case "rank":
                 if (targetKit == null) return "0";
-                return String.valueOf(FfaRankingService.getInstance().getRank(player.getUniqueId(), targetKit.getName()));
+                int rank = FfaRankingService.getInstance().getRank(player.getUniqueId(), targetKit.getName());
+                return rank == -1 ? "-" : String.valueOf(rank);
             case "top_killer":
                 if (targetKit == null) return "None";
                 return FfaRankingService.getInstance().getTopKiller(targetKit.getName());

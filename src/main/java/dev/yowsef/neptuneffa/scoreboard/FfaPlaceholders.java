@@ -43,7 +43,7 @@ public class FfaPlaceholders {
         int topKills    = ranking.getTopKillerKills(kit);
         int killsToNext = ranking.getKillsToNextRank(player.getUniqueId(), kit);
 
-        line = line.replace("<ffa_rank>", String.valueOf(rank));
+        line = line.replace("<ffa_rank>", rank == -1 ? "-" : String.valueOf(rank));
         line = line.replace("<ffa_top_killer>", topKiller);
         line = line.replace("<ffa_top_killer_kills>", String.valueOf(topKills));
         line = line.replace("<ffa_kills_to_next_rank>", String.valueOf(killsToNext));

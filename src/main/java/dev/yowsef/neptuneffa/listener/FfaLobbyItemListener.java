@@ -124,6 +124,9 @@ public class FfaLobbyItemListener implements Listener {
         String name = cfg.getLobbyItemName();
         List<String> lore = cfg.getLobbyItemLore();
 
+        // drop any old copy first, after a reload with a new slot the old one stayed and you had two
+        removeLobbyItem(player);
+
         ItemStack item = new ItemBuilder(material).name(name).lore(lore).build();
 
         // Tag item with PDC key

@@ -1,10 +1,12 @@
 package dev.yowsef.neptuneffa.menu.player;
 
 import dev.lrxh.api.kit.IKit;
+import dev.yowsef.neptuneffa.session.FfaParticipant;
 import dev.yowsef.neptuneffa.session.FfaSession;
 import dev.yowsef.neptuneffa.session.FfaSessionService;
 import dev.yowsef.neptuneffa.util.FormatUtil;
 import dev.yowsef.neptuneffa.API;
+import dev.yowsef.neptuneffa.config.MessagesConfig;
 import dev.yowsef.neptuneffa.util.ItemBuilder;
 import dev.yowsef.neptuneffa.util.menu.Button;
 import org.bukkit.Material;
@@ -28,8 +30,8 @@ public class FfaKitButton extends Button {
         FfaSession session = FfaSessionService.getInstance().getSession(kit.getName());
         if (session == null || !session.isOpen()) {
             return new ItemBuilder(Material.GRAY_STAINED_GLASS_PANE)
-                    .name("&7" + kit.getDisplayName())
-                    .lore("&cThis session is closed.")
+                    .name(MessagesConfig.MENU_KIT_CLOSED_NAME.replace("{kit}", kit.getDisplayName()))
+                    .lore(MessagesConfig.MENU_KIT_CLOSED_LORE)
                     .build();
         }
 
@@ -37,19 +39,18 @@ public class FfaKitButton extends Button {
         
         List<String> lore = new ArrayList<>();
         if (playing) {
-            lore.add("&c[Currently Playing]");
-            lore.add("");
-            lore.add("&7Right-click to leave");
+            lore.addAll(MessagesConfig.MENU_KIT_PLAYING_LORE);
         } else {
-            lore.add("&fPlayers: &a" + session.getParticipants().size());
-            lore.add("&fArena: &e" + session.getSettings().getArenaName());
-            lore.add("&fReset in: &e" + FormatUtil.formatTime(session.getResetTask().getSecondsRemaining()));
-            lore.add("");
-            lore.add("&7Left-click to join");
+            String players = String.valueOf(session.getParticipants().size());
+            String arena = session.getSettings().getArenaName();
+            String reset = FormatUtil.formatTime(session.getResetTask().getSecondsRemaining());
+            for (String line : MessagesConfig.MENU_KIT_JOIN_LORE) {
+                lore.add(line.replace("{players}", players).replace("{arena}", arena).replace("{reset}", reset));
+            }
         }
 
         return new ItemBuilder(kit.getIcon())
-                .name("&c&l" + kit.getDisplayName())
+                .name(MessagesConfig.MENU_KIT_NAME.replace("{kit}", kit.getDisplayName()))
                 .lore(lore)
                 .build();
     }
@@ -64,7 +65,7 @@ public class FfaKitButton extends Button {
         if (clickType.isLeftClick() && !playing) {
             dev.lrxh.api.profile.IProfile profile = API.getProfile(player.getUniqueId());
             if (profile != null && !API.isInLobby(profile)) {
-                player.sendMessage("§cYou must be in the lobby to join FFA.");
+                FormatUtil.sendMessage(player, MessagesConfig.FFA_MUST_BE_IN_LOBBY);
                 player.closeInventory();
                 return;
             }
@@ -72,7 +73,13 @@ public class FfaKitButton extends Button {
             session.addPlayer(player);
         } else if (clickType.isRightClick() && playing) {
             player.closeInventory();
-            session.removePlayer(player.getUniqueId(), "&cYou left FFA.", true);
+            // same rule as the command block, no leaving mid fight through the menu
+            FfaParticipant participant = session.getParticipant(player.getUniqueId());
+            if (participant.isCombatTagged() && !player.hasPermission("neptuneffa.admin")) {
+                FormatUtil.sendMessage(player, MessagesConfig.COMBAT_NO_LEAVE);
+                return;
+            }
+            session.removePlayer(player.getUniqueId(), MessagesConfig.FFA_LEFT, true);
         }
     }
 }

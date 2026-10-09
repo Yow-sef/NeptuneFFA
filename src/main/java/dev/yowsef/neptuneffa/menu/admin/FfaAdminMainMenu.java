@@ -1,7 +1,9 @@
 package dev.yowsef.neptuneffa.menu.admin;
 
 import dev.yowsef.neptuneffa.config.FfaConfig;
+import dev.yowsef.neptuneffa.config.MessagesConfig;
 import dev.yowsef.neptuneffa.session.FfaSessionService;
+import dev.yowsef.neptuneffa.util.FormatUtil;
 import dev.yowsef.neptuneffa.util.ItemBuilder;
 import dev.yowsef.neptuneffa.util.menu.Button;
 import dev.yowsef.neptuneffa.util.menu.Menu;
@@ -58,16 +60,19 @@ public class FfaAdminMainMenu extends Menu {
             public ItemStack getItemStack(Player p) {
                 return new ItemBuilder(Material.PAPER)
                         .name("&aReload Config")
-                        .lore("&7Hot-reload config.yml and kits.yml.")
+                        .lore("&7Hot-reload config.yml, kits.yml and messages.yml.")
                         .build();
             }
 
             @Override
             public void onClick(Player p, ClickType clickType) {
-                FfaConfig.get().reload();
-                FfaSessionService.getInstance().rebuildAll();
-                p.sendMessage("§aConfig and sessions reloaded.");
                 p.closeInventory();
+                Menu.closeAll();
+                FfaConfig.get().reload();
+                // messages were only reloaded by the command, not this button
+                MessagesConfig.load();
+                FfaSessionService.getInstance().rebuildAll();
+                FormatUtil.sendMessage(p, MessagesConfig.ADMIN_RELOADED);
             }
         });
 
