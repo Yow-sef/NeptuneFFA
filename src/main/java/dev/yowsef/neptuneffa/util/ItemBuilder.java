@@ -1,7 +1,8 @@
 package dev.yowsef.neptuneffa.util;
 
-import org.bukkit.ChatColor;
+import com.google.common.collect.ArrayListMultimap;
 import org.bukkit.Material;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -22,7 +23,7 @@ public class ItemBuilder {
     public ItemBuilder name(String name) {
         ItemMeta meta = itemStack.getItemMeta();
         if (meta == null) return this;
-        meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
+        meta.setDisplayName(FormatUtil.color(name));
         itemStack.setItemMeta(meta);
         return this;
     }
@@ -32,7 +33,7 @@ public class ItemBuilder {
         if (meta == null) return this;
         List<String> coloredLore = new ArrayList<>();
         for (String line : lore) {
-            coloredLore.add(ChatColor.translateAlternateColorCodes('&', line));
+            coloredLore.add(FormatUtil.color(line));
         }
         meta.setLore(coloredLore);
         itemStack.setItemMeta(meta);
@@ -43,7 +44,17 @@ public class ItemBuilder {
         return lore(List.of(lore));
     }
 
+    public ItemBuilder hideAttributes() {
+        ItemMeta meta = itemStack.getItemMeta();
+        if (meta == null) return this;
+        meta.setAttributeModifiers(ArrayListMultimap.create());
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        itemStack.setItemMeta(meta);
+        return this;
+    }
+
     public ItemStack build() {
+        hideAttributes();
         return itemStack;
     }
 }

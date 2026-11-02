@@ -5,6 +5,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import java.lang.reflect.Method;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.logging.Logger;
 
 public class FormatUtil {
@@ -42,8 +44,19 @@ public class FormatUtil {
         PLAYER_UTIL_RESET = reset;
     }
 
+    private static final Pattern HEX = Pattern.compile("&#([A-Fa-f0-9]{6})");
+
     public static String color(String s) {
-        return s == null ? "" : ChatColor.translateAlternateColorCodes('&', s);
+        if (s == null) return "";
+        Matcher m = HEX.matcher(s);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) {
+            StringBuilder hex = new StringBuilder("§x");
+            for (char c : m.group(1).toCharArray()) hex.append('§').append(c);
+            m.appendReplacement(sb, Matcher.quoteReplacement(hex.toString()));
+        }
+        m.appendTail(sb);
+        return ChatColor.translateAlternateColorCodes('&', sb.toString());
     }
 
     public static String formatTime(int seconds) {
