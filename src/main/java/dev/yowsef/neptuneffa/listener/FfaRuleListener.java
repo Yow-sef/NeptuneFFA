@@ -337,13 +337,18 @@ public class FfaRuleListener implements Listener {
         FfaSession owningSession = FfaSessionService.getInstance().getSessionByLocation(event.getLocation());
         if (owningSession == null) return; // Explosion not inside any FFA arena
 
+        // same rule as breaking by hand: placed blocks always go, arena blocks only when the kit has
+        // arenaBreak and the block is on the arena whitelist (crystal pvp terrain)
+        IArena arena = owningSession.getArena();
+        boolean arenaBreak = arena != null && API.kitIs(owningSession.getKit(), "arenaBreak");
         event.blockList().removeIf(block -> {
             if (owningSession.getPlacedBlocks().contains(block.getLocation())) {
                 owningSession.getPlacedBlocks().remove(block.getLocation());
-                return false; // Keep this block in the explosion (it was player-placed)
+                return false;
             }
-            return true; // Remove from explosion — original terrain should not be destroyed
+            return !(arenaBreak && arena.getWhitelistedBlocks().contains(block.getType()));
         });
+        if (arenaBreak) event.setYield(0f); // no terrain drops, same as breaking by hand
     }
 
     // Whitelist /ffa leave
