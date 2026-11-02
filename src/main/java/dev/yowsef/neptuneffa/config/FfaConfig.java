@@ -27,6 +27,10 @@ public class FfaConfig {
     private boolean trackNeptuneKitStats;
     private int combatTagDurationSeconds;
     private String combatTagActionbarMessage;
+    private int leaveDelaySeconds;
+    private boolean leaveCancelOnMove;
+    private boolean leaveCancelOnDamage;
+    private boolean leaveCountdownActionbar;
     private String scoreboardTitle;
     private List<String> scoreboardLines;
     // Reset warning seconds
@@ -93,6 +97,10 @@ public class FfaConfig {
         this.trackNeptuneKitStats = config.getBoolean("ffa.track-neptune-kit-stats", true);
         this.combatTagDurationSeconds = config.getInt("ffa.combat-tag.duration-seconds", 15);
         this.combatTagActionbarMessage = config.getString("ffa.combat-tag.actionbar-message", "&c&lCombat Tag: &e{seconds}s");
+        this.leaveDelaySeconds = Math.max(0, config.getInt("ffa.combat-tag.leave.delay-seconds", 3));
+        this.leaveCancelOnMove = config.getBoolean("ffa.combat-tag.leave.cancel-on-move", true);
+        this.leaveCancelOnDamage = config.getBoolean("ffa.combat-tag.leave.cancel-on-damage", true);
+        this.leaveCountdownActionbar = config.getBoolean("ffa.combat-tag.leave.countdown-actionbar", true);
         this.scoreboardTitle = config.getString("ffa.scoreboard.title", "&c&lFFA");
         this.scoreboardLines = config.getStringList("ffa.scoreboard.lines");
         // Load reset warning seconds

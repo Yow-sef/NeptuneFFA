@@ -14,6 +14,13 @@ ffa:
   combat-tag:
     duration-seconds: 15
     actionbar-message: "&c&lCombat Tag: &e{seconds}s"
+    # Leaving FFA (/ffa leave, /leave, /spawn, right-click in /ffa). Refused while tagged.
+    # neptuneffa.admin skips both the tag check and the delay.
+    leave:
+      delay-seconds: 3            # 0 = leave instantly
+      cancel-on-move: true        # moving to another block cancels the countdown
+      cancel-on-damage: true      # taking damage cancels the countdown
+      countdown-actionbar: true   # false = chat message every second instead
 
   menu:
     title: "&c&lFree For All"

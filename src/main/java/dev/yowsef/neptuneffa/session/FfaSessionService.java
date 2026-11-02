@@ -26,6 +26,7 @@ public class FfaSessionService {
     }
 
     public void rebuildAll() {
+        FfaLeaveService.get().cancelAll();
         // destroy too, not just close. a reset that is mid restore still holds the old session
         // and would reopen it later as a ghost session that keeps resetting the arena
         sessions.values().forEach(s -> {
@@ -87,6 +88,7 @@ public class FfaSessionService {
 
     // Shut down all sessions
     public void shutdownAll() {
+        FfaLeaveService.get().cancelAll();
         sessions.values().forEach(s -> {
             s.close("");
             s.destroy();

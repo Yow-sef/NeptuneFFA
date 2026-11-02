@@ -4,7 +4,7 @@ import dev.lrxh.api.kit.IKit;
 import dev.yowsef.neptuneffa.API;
 import dev.yowsef.neptuneffa.config.MessagesConfig;
 import dev.yowsef.neptuneffa.menu.player.FfaKitSelectorMenu;
-import dev.yowsef.neptuneffa.session.FfaParticipant;
+import dev.yowsef.neptuneffa.session.FfaLeaveService;
 import dev.yowsef.neptuneffa.session.FfaSession;
 import dev.yowsef.neptuneffa.session.FfaSessionService;
 import org.bukkit.Bukkit;
@@ -62,12 +62,7 @@ public class FfaCommand implements TabExecutor {
                     sendMessage(player, MessagesConfig.FFA_NOT_IN_FFA);
                     return true;
                 }
-                FfaParticipant participant = currentSession.getParticipant(player.getUniqueId());
-                if (participant != null && participant.isCombatTagged() && !player.hasPermission("neptuneffa.admin")) {
-                    sendMessage(player, MessagesConfig.COMBAT_NO_LEAVE);
-                    return true;
-                }
-                currentSession.removePlayer(player.getUniqueId(), MessagesConfig.FFA_LEFT, true);
+                FfaLeaveService.get().requestLeave(player, currentSession);
                 break;
             case "list":
                 sendMessage(player, MessagesConfig.FFA_LIST_HEADER);

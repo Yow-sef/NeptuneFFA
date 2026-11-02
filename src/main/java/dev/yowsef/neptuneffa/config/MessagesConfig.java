@@ -31,6 +31,12 @@ public class MessagesConfig {
     public static String FFA_ARENA_NO_SPAWN;
     public static String COMBAT_NO_COMMANDS;
     public static String COMBAT_NO_LEAVE;
+    public static String LEAVE_IN_COMBAT;
+    public static String LEAVE_COUNTDOWN;
+    public static String LEAVE_CANCELLED_MOVE;
+    public static String LEAVE_CANCELLED_DAMAGE;
+    public static String LEAVE_CANCELLED;
+    public static String LEAVE_ALREADY;
     public static String PLAYERS_ONLY;
     public static String PLAYER_NOT_FOUND;
     public static String NEPTUNE_UNAVAILABLE;
@@ -67,6 +73,7 @@ public class MessagesConfig {
     public static List<String> MENU_KIT_JOIN_LORE;
 
     public static void load() {
+        migrateLegacyLeaveMessage();
         FfaConfig.updateConfig("messages.yml");
         File file = new File(NeptuneFFA.getInstance().getDataFolder(), "messages.yml");
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
@@ -91,6 +98,12 @@ public class MessagesConfig {
         FFA_ARENA_NO_SPAWN = color(config.getString("ffa-arena-no-spawn", "&cThis FFA arena has no valid spawn configured. Contact an admin."));
         COMBAT_NO_COMMANDS = color(config.getString("combat-no-commands", "&cYou cannot use commands while in combat!"));
         COMBAT_NO_LEAVE = color(config.getString("combat-no-leave", "&cYou cannot leave while in combat!"));
+        LEAVE_IN_COMBAT = color(config.getString("leave-in-combat", "&cYou cannot leave while in combat! &7({seconds}s left)"));
+        LEAVE_COUNTDOWN = color(config.getString("leave-countdown", "&eLeaving FFA in &c{seconds}s&e... &7(don't move)"));
+        LEAVE_CANCELLED_MOVE = color(config.getString("leave-cancelled-move", "&cLeave cancelled, you moved."));
+        LEAVE_CANCELLED_DAMAGE = color(config.getString("leave-cancelled-damage", "&cLeave cancelled, you took damage."));
+        LEAVE_CANCELLED = color(config.getString("leave-cancelled", "&cLeave cancelled."));
+        LEAVE_ALREADY = color(config.getString("leave-already", "&cYou are already leaving FFA."));
         PLAYERS_ONLY = color(config.getString("players-only", "&cThis command is for players only."));
         PLAYER_NOT_FOUND = color(config.getString("player-not-found", "&cPlayer not found."));
         NEPTUNE_UNAVAILABLE = color(config.getString("neptune-unavailable", "&cNeptune API is not available."));
@@ -125,6 +138,21 @@ public class MessagesConfig {
         MENU_KIT_CLOSED_LORE = colorList(config, "menu-kit-closed-lore", List.of("&cThis session is closed."));
         MENU_KIT_PLAYING_LORE = colorList(config, "menu-kit-playing-lore", List.of("&c[Currently Playing]", "", "&7Right-click to leave"));
         MENU_KIT_JOIN_LORE = colorList(config, "menu-kit-join-lore", List.of("&fPlayers: &a{players}", "&fArena: &e{arena}", "&fReset in: &e{reset}", "", "&7Left-click to join"));
+    }
+
+    // A messages.yml from before the leave flow only has combat-no-leave. updateConfig would fill
+    // leave-in-combat with the stock default, so carry the server's own wording over first.
+    private static void migrateLegacyLeaveMessage() {
+        File file = new File(NeptuneFFA.getInstance().getDataFolder(), "messages.yml");
+        if (!file.exists()) return;
+        YamlConfiguration existing = YamlConfiguration.loadConfiguration(file);
+        if (existing.contains("leave-in-combat") || !existing.contains("combat-no-leave")) return;
+        existing.set("leave-in-combat", existing.getString("combat-no-leave"));
+        try {
+            existing.save(file);
+        } catch (java.io.IOException e) {
+            NeptuneFFA.getInstance().getLogger().warning("Could not migrate combat-no-leave to leave-in-combat: " + e.getMessage());
+        }
     }
 
     private static List<String> colorList(FileConfiguration config, String key, List<String> def) {

@@ -21,6 +21,14 @@ ffa-arena-no-spawn: "&cThis FFA arena has no valid spawn configured. Contact an 
 combat-no-commands: "&cYou cannot use commands while in combat!"
 combat-no-leave:    "&cYou cannot leave while in combat!"
 
+# leaving FFA. {seconds}
+leave-in-combat:        "&cYou cannot leave while in combat! &7({seconds}s left)"
+leave-countdown:        "&eLeaving FFA in &c{seconds}s&e... &7(don't move)"
+leave-cancelled-move:   "&cLeave cancelled, you moved."
+leave-cancelled-damage: "&cLeave cancelled, you took damage."
+leave-cancelled:        "&cLeave cancelled."
+leave-already:          "&cYou are already leaving FFA."
+
 # /ffa
 players-only:        "&cThis command is for players only."
 player-not-found:    "&cPlayer not found."
