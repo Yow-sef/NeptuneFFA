@@ -1,7 +1,7 @@
 package dev.yowsef.neptuneffa.config;
 
 import dev.yowsef.neptuneffa.NeptuneFFA;
-import org.bukkit.ChatColor;
+import dev.yowsef.neptuneffa.util.FormatUtil;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -135,6 +135,6 @@ public class MessagesConfig {
     }
 
     private static String color(String s) {
-        return s == null ? "" : ChatColor.translateAlternateColorCodes('&', s);
+        return FormatUtil.color(s);
     }
 }
