@@ -169,6 +169,8 @@ public class FfaSession {
         FfaParticipant p = getParticipant(uuid);
         if (p == null) return;
 
+        FfaLeaveService.get().cancel(uuid, null);
+
         // Broadcast leave message if enabled for this kit
         String playerName = Bukkit.getPlayer(uuid) != null
                 ? Bukkit.getPlayer(uuid).getName()
@@ -217,6 +219,7 @@ public class FfaSession {
         // Mark straight away. The respawn task only sets this on its first tick, so a second
         // lethal hit / void move in the same tick used to count the death twice
         victimP.setInRespawnCountdown(true);
+        FfaLeaveService.get().cancel(victim.getUniqueId(), MessagesConfig.LEAVE_CANCELLED);
         if (!victim.isDead()) victim.setHealth(getMaxHealth(victim));
         victim.setFireTicks(0);
 

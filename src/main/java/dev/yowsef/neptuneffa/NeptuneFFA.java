@@ -50,6 +50,7 @@ public class NeptuneFFA extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new FfaPlayerListener(), this);
         Bukkit.getPluginManager().registerEvents(new dev.yowsef.neptuneffa.util.menu.MenuListener(), this);
         Bukkit.getPluginManager().registerEvents(new dev.yowsef.neptuneffa.listener.FfaLobbyItemListener(), this);
+        Bukkit.getPluginManager().registerEvents(dev.yowsef.neptuneffa.session.FfaLeaveService.get(), this);
 
         // Register commands
         dev.yowsef.neptuneffa.command.FfaCommand ffaCommand = new dev.yowsef.neptuneffa.command.FfaCommand();
@@ -102,6 +103,7 @@ public class NeptuneFFA extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        dev.yowsef.neptuneffa.session.FfaLeaveService.get().cancelAll();
         // Shut down all sessions
         if (FfaSessionService.getInstance() != null) {
             FfaSessionService.getInstance().shutdownAll();

@@ -5,6 +5,7 @@ import dev.lrxh.api.kit.IKit;
 import dev.yowsef.neptuneffa.API;
 import dev.yowsef.neptuneffa.NeptuneFFA;
 import dev.yowsef.neptuneffa.config.MessagesConfig;
+import dev.yowsef.neptuneffa.session.FfaLeaveService;
 import dev.yowsef.neptuneffa.session.FfaParticipant;
 import dev.yowsef.neptuneffa.session.FfaSession;
 import dev.yowsef.neptuneffa.session.FfaSessionService;
@@ -84,6 +85,7 @@ public class FfaRuleListener implements Listener {
                 attackerP.clearSpawnProtection(); // Lose protection when you attack
             }
             p.setLastAttacker(attacker.getUniqueId());
+            FfaLeaveService.get().cancel(player.getUniqueId(), MessagesConfig.LEAVE_CANCELLED);
         }
 
         if (event.getCause() == EntityDamageEvent.DamageCause.FALL && !API.kitIs(kit, "fallDamage")) {
@@ -364,19 +366,22 @@ public class FfaRuleListener implements Listener {
         FfaSession session = getSession(player);
         if (session == null) return;
 
-        // Combat tag check first. /ffa leave (and the /ffa menu) used to be whitelisted before
-        // this check, so you could just leave mid fight with no death
+        // /leave and /spawn go through the shared leave flow (tag check + delay live there)
+        if (label.equals("/leave") || label.equals("/spawn")) {
+            event.setCancelled(true);
+            FfaLeaveService.get().requestLeave(player, session);
+            return;
+        }
+
+        // /ffa leave is handled by the command itself, same flow
+        String[] parts = cmd.split("\\s+");
+        if (label.equals("/ffa") && parts.length > 1 && parts[1].equals("leave")) return;
+
+        // Everything else is blocked while tagged
         FfaParticipant p = session.getParticipant(player.getUniqueId());
         if (p != null && p.isCombatTagged() && !player.hasPermission("neptuneffa.admin")) {
             event.setCancelled(true);
             FormatUtil.sendMessage(player, MessagesConfig.COMBAT_NO_COMMANDS);
-            return;
-        }
-
-        // Handle /leave or /spawn commands to cleanly leave FFA
-        if (label.equals("/leave") || label.equals("/spawn")) {
-            event.setCancelled(true);
-            session.removePlayer(player.getUniqueId(), MessagesConfig.FFA_LEFT, true);
         }
     }
 

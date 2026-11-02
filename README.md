@@ -62,6 +62,17 @@ ffa:
   reset-warning-seconds: [60, 30, 10, 5]
   track-neptune-kit-stats: true
 
+  combat-tag:
+    duration-seconds: 15
+    actionbar-message: "&c&lCombat Tag: &e{seconds}s"
+    # Leaving FFA (/ffa leave, /leave, /spawn, right-click in the /ffa menu).
+    # Refused while combat tagged. neptuneffa.admin skips the tag check and the delay.
+    leave:
+      delay-seconds: 3            # countdown before leaving, 0 = instant
+      cancel-on-move: true        # moving to another block cancels it
+      cancel-on-damage: true      # taking damage cancels it
+      countdown-actionbar: true   # false = chat message every second instead
+
   # Scoreboard settings for players in the "IN_FFA" state
   scoreboard:
     update-interval-ticks: 20
@@ -126,6 +137,12 @@ ffa-respawn:     "&7Respawning in &e{seconds}&7..."
 ffa-no-session:  "&cNo FFA session is open for that kit."
 ffa-not-in-ffa:  "&cYou are not in an FFA session."
 ffa-already-in:  "&cYou are already in an FFA session."
+leave-in-combat:        "&cYou cannot leave while in combat! &7({seconds}s left)"
+leave-countdown:        "&eLeaving FFA in &c{seconds}s&e... &7(don't move)"
+leave-cancelled-move:   "&cLeave cancelled, you moved."
+leave-cancelled-damage: "&cLeave cancelled, you took damage."
+leave-cancelled:        "&cLeave cancelled."
+leave-already:          "&cYou are already leaving FFA."
 ```
 Thats just the main ones, every chat message the plugin sends is in this file (combat tag, /ffa, /ffaadmin, admin menus) and so is the text on the /ffa kit items. Placeholders like `{kit}` `{player}` work where the default text uses them. New keys get added to your file automatically on update.
 

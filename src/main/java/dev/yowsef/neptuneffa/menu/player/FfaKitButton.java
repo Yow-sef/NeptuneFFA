@@ -1,7 +1,7 @@
 package dev.yowsef.neptuneffa.menu.player;
 
 import dev.lrxh.api.kit.IKit;
-import dev.yowsef.neptuneffa.session.FfaParticipant;
+import dev.yowsef.neptuneffa.session.FfaLeaveService;
 import dev.yowsef.neptuneffa.session.FfaSession;
 import dev.yowsef.neptuneffa.session.FfaSessionService;
 import dev.yowsef.neptuneffa.util.FormatUtil;
@@ -73,13 +73,7 @@ public class FfaKitButton extends Button {
             session.addPlayer(player);
         } else if (clickType.isRightClick() && playing) {
             player.closeInventory();
-            // same rule as the command block, no leaving mid fight through the menu
-            FfaParticipant participant = session.getParticipant(player.getUniqueId());
-            if (participant.isCombatTagged() && !player.hasPermission("neptuneffa.admin")) {
-                FormatUtil.sendMessage(player, MessagesConfig.COMBAT_NO_LEAVE);
-                return;
-            }
-            session.removePlayer(player.getUniqueId(), MessagesConfig.FFA_LEFT, true);
+            FfaLeaveService.get().requestLeave(player, session);
         }
     }
 }
