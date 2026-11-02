@@ -287,8 +287,8 @@ public class FfaRuleListener implements Listener {
         FfaSession session = FfaSessionService.getInstance()
                 .getSessionByLocation(event.getLocation());
         if (session == null) return;
-        // Allow items to exist inside FFA arenas  Neptune cancels these (in_game)
-        event.setCancelled(false);
+        // Only BUILD kits keep item entities (placed-block recovery); stray drops such as falling sand stay cancelled
+        event.setCancelled(!API.kitIs(session.getKit(), "build"));
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
